@@ -1,0 +1,3 @@
+[submodule "classes/api/payin7-php"]
+	path = classes/api/payin7-php
+	url = https://github.com/payin7-payments/payin7-php.git
