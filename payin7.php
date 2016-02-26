@@ -149,7 +149,7 @@ class Payin7 extends PaymentModule
                 'title' => $this->l('Pay in 7 days')
             ),
             'installments' => array(
-                'title' => $this->l('Pay with monthly installments')
+                'title' => $this->l('Finance Payment')
             )
         );
     }
@@ -787,10 +787,19 @@ class Payin7 extends PaymentModule
         $payment_method_cfg = $remote_platform_config->getPaymentMethodConfig($payment_method);
 
         $supported_currencies = isset($payment_method_cfg['supported_currencies']) ?
-            $payment_method_cfg['supported_currencies'] :
+            (array)$payment_method_cfg['supported_currencies'] :
             array();
 
         return (($supported_currencies && $currency_code && in_array($currency_code, $supported_currencies)) || !$supported_currencies);
+    }
+
+    protected function roundPrice($price)
+    {
+        if (!$price) {
+            return null;
+        }
+
+        return Tools::ps_round($price, (int)$this->context->currency->decimals * _PS_PRICE_COMPUTE_PRECISION_);
     }
 
     /**
@@ -827,9 +836,9 @@ class Payin7 extends PaymentModule
         $quote->setShippingMethodTitle($carrier->name);
         $quote->setCreatedAt($cart->date_add);
         $quote->setUpdatedAt($cart->date_upd);
-        $quote->setShippingAmount($shipping_cost);
+        $quote->setShippingAmount($this->roundPrice($shipping_cost));
         /** @noinspection PhpUndefinedMethodInspection */
-        $quote->setGrandTotal($cart->getOrderTotal());
+        $quote->setGrandTotal($this->roundPrice($cart->getOrderTotal()));
         $quote->setOrderedItems(($products ? count($products) : null));
         /** @noinspection PhpUndefinedFieldInspection */
         $quote->setCustomerIsGuest((bool)$cust->is_guest);
@@ -939,16 +948,16 @@ class Payin7 extends PaymentModule
                 $pm->setFullDescription(isset($product['attributes']) ? $product['attributes'] : null);
                 $pm->setIsVirtual(isset($product['is_virtual']) ? $product['is_virtual'] : null);
                 $pm->setQtyOrdered($product['cart_quantity']);
-                $pm->setPriceInclTax($product['price_wt']);
-                $pm->setPrice($product['price']);
+                $pm->setPriceInclTax($this->roundPrice($product['price_wt']));
+                $pm->setPrice($this->roundPrice($product['price']));
                 $pm->setTaxAmount($product['price_wt'] - $product['price']);
-                $pm->setPriceBeforeDiscount((isset($product['price_without_reduction']) ? $product['price_without_reduction'] : null));
-                $pm->setDiscountAmount((isset($product['price_with_reduction_without_tax']) ? $product['price_with_reduction_without_tax'] : null));
-                $pm->setDiscountAmountWithTax((isset($product['price_with_reduction']) ? $product['price_with_reduction'] : null));
-                $pm->setShippingAmountWithTax(isset($product['additional_shipping_cost']) ? $product['additional_shipping_cost'] : null);
-                $pm->setShippingAmount($pm->getShippingAmountWithTax());
-                $pm->setRowTotal($product['price']);
-                $pm->setRowTotalInclTax($product['price_wt']);
+                $pm->setPriceBeforeDiscount($this->roundPrice((isset($product['price_without_reduction']) ? $product['price_without_reduction'] : null)));
+                $pm->setDiscountAmount($this->roundPrice((isset($product['price_with_reduction_without_tax']) ? $product['price_with_reduction_without_tax'] : null)));
+                $pm->setDiscountAmountWithTax($this->roundPrice((isset($product['price_with_reduction']) ? $product['price_with_reduction'] : null)));
+                $pm->setShippingAmountWithTax($this->roundPrice(isset($product['additional_shipping_cost']) ? $product['additional_shipping_cost'] : null));
+                $pm->setShippingAmount($this->roundPrice($pm->getShippingAmountWithTax()));
+                $pm->setRowTotal($this->roundPrice($product['price']));
+                $pm->setRowTotalInclTax($this->roundPrice($product['price_wt']));
                 $pm->setTaxRate((isset($product['rate']) ? $product['rate'] : null));
 
                 $quote->addItem($pm);

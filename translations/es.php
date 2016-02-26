@@ -29,6 +29,7 @@ $_MODULE = array();
 $_MODULE['<{payin7}prestashop>payin7_61cfa003462eaa19fea8ef81713ea670'] = 'Payin7';
 $_MODULE['<{payin7}prestashop>payin7_a5f8590ee0b12aadaec2f91a550cfc0c'] = '¡Financie sus sueños!';
 $_MODULE['<{payin7}prestashop>payin7_129e2f920bd006d7e169602789e4caac'] = 'Pago en 7 días';
+$_MODULE['<{payin7}prestashop>payin7_c447f916ef6bc6a961037fb1708db2bf'] = 'Pago Financiado';
 $_MODULE['<{payin7}prestashop>payin7_d267b086d52f640f2f8de6d9b1ecedff'] = 'Pago con cuotas ';
 $_MODULE['<{payin7}prestashop>payin7_00d23a76e43b46dae9ec7aa9dcbebb32'] = 'Habilitado';
 $_MODULE['<{payin7}prestashop>payin7_b9f5c797ebbf55adccdd8539a65a0241'] = 'Deshabilitado';

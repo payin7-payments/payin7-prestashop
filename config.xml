@@ -1,37 +1,12 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<!--
-/**
- * 2015-2016 Copyright (C) Payin7 S.L.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- * DISCLAIMER
- *
- * Do not modify this file if you wish to upgrade the Payin7 module automatically in the future.
- *
- * @author    Payin7 S.L. <info@payin7.com>
- * @copyright 2015-2016 Payin7 S.L.
- * @license   http://opensource.org/licenses/GPL-3.0 GNU General Public License, version 3 (GPL-3.0)
- */
-!-->
 <module>
-    <name>payin7</name>
-    <displayName><![CDATA[Payin7]]></displayName>
-    <version><![CDATA[1.0.0]]></version>
-    <description><![CDATA[&iexcl;Financie sus sue&ntilde;os!]]></description>
-    <author><![CDATA[payin7]]></author>
-    <tab><![CDATA[payments_gateways]]></tab>
-    <is_configurable>1</is_configurable>
-    <need_instance>0</need_instance>
+	<name>payin7</name>
+	<displayName><![CDATA[Payin7]]></displayName>
+	<version><![CDATA[1.0.0]]></version>
+	<description><![CDATA[Finance your Dreams!]]></description>
+	<author><![CDATA[payin7]]></author>
+	<tab><![CDATA[payments_gateways]]></tab>
+	<is_configurable>1</is_configurable>
+	<need_instance>0</need_instance>
+	<limited_countries></limited_countries>
 </module>
