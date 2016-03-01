@@ -59,6 +59,17 @@ class Payin7 extends PaymentModule
     const SERVICE_RES = 4;
     const SERVICE_JSAPI = 5;
 
+    const PAYIN7_ORDER_STATE_ACCEPTED = 'accepted';
+    const PAYIN7_ORDER_STATE_REJECTED = 'rejected';
+    const PAYIN7_ORDER_STATE_VERIFIED = 'verified';
+
+    const REJECT_COOKIE_NAME = 'p7rj';
+
+    /** PAID actually means accepted after verification (it may not really be paid for some payment methods */
+    const PAYIN7_ORDER_STATE_PAID = 'paid';
+    const PAYIN7_ORDER_STATE_CANCELLED = 'cancelled';
+    const PAYIN7_ORDER_STATE_ERROROUS = 'errorous';
+
     private $_service_subdomains = array(
         self::SERVICE_API => 'api',
         self::SERVICE_BACKEND => 'clients',
@@ -655,6 +666,16 @@ class Payin7 extends PaymentModule
         return $this->_is14;
     }
 
+    public function hasRejectCookie()
+    {
+        return (bool)$this->context->cookie->__get(self::REJECT_COOKIE_NAME);
+    }
+
+    public function setRejectCookie($set = true)
+    {
+        $this->context->cookie->__set(self::REJECT_COOKIE_NAME, ($set ? true : null));
+    }
+
     public function hookAdminOrder($params)
     {
         if (!isset($params['id_order'])) {
@@ -1021,6 +1042,13 @@ class Payin7 extends PaymentModule
 
     public function hookPayment()
     {
+        // check if we have a reject cookie and skip showing the buttons if true
+        $is_rejected = $this->hasRejectCookie();
+
+        if ($is_rejected) {
+            return null;
+        }
+
         /** @var Payin7\Models\PlatformConfigModel $remote_platform_config */
         $remote_platform_config = $this->getModelInstance('platform_config');
 
@@ -1135,6 +1163,12 @@ class Payin7 extends PaymentModule
         $cfg = Configuration::get('PAYIN7_API_SERVER_HOSTNAME');
         $cfg = $cfg ? $cfg : ($with_defaults ? self::CFG_DEFAULT_PAYIN7_API_SERVER_HOSTNAME : $cfg);
         return $cfg;
+    }
+
+    public function getConfigIdOrderStateAccepted()
+    {
+        /** @noinspection PhpUndefinedClassInspection */
+        return Configuration::get('PAYIN7_ID_ORDER_STATE_ACCEPTED');
     }
 
     public function getConfigIdOrderStateCancelled()
@@ -1268,7 +1302,7 @@ class Payin7 extends PaymentModule
                 $this->getConfigApiIntegrationId())));
     }
 
-    public function getFrontendOrderCompleteUrl(Payin7\Models\OrderModel $order, $is_saved_order = false, $secure = null)
+    public function getFrontendOrderCompleteUrl(Payin7\Models\OrderModel $order, $is_saved_order = false, $secure = null, $canclose = true)
     {
         $identifier = $order->getPayin7OrderIdentifier();
         $access_token = $order->getPayin7AccessToken();
@@ -1282,7 +1316,8 @@ class Payin7 extends PaymentModule
         return $this->getServiceUrl(self::SERVICE_FRONTEND, '/orders/complete/' . urlencode($identifier),
             array(
                 'ac' => $this->getEncryptedOrderKey($access_token),
-                'saved_order' => $is_saved_order
+                'saved_order' => $is_saved_order,
+                'canclose' => (int)$canclose
             ), $secure, false, $sandbox_order);
     }
 

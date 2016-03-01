@@ -30,11 +30,33 @@ class Payin7OrderSuccessModuleFrontController extends Payin7OrderRetModuleFrontC
 {
     public function execute()
     {
+        // check if POST
+        $this->verifyIsPost();
+
         $order = $this->getVerifyOrder();
 
-        if (!$order->getPayin7OrderSent()) {
+        // update the order state
+        if (!$order->getPayin7OrderAccepted()) {
             $order->setPayin7OrderAccepted(true);
             $order->savePayin7Data();
+        }
+
+        if ($this->_is_verified &&
+            $this->_is_paid
+        ) {
+            /** @var OrderCore $orderm */
+            /** @noinspection PhpUndefinedClassInspection */
+            $orderm = new Order($order->getOrderId());
+
+            $state = $orderm->current_state;
+
+            if ($state != $this->module->getConfigIdOrderStatePending()) {
+                $this->handleError($this->module->l('Invalid order state'), self::RESP_INVALID_ORDER_STATE_ERR, true);
+            }
+
+            if ($state != $this->module->getConfigIdOrderStateAccepted()) {
+                $orderm->setCurrentState($this->module->getConfigIdOrderStateAccepted());
+            }
         }
 
         $this->context->smarty->assign(array(

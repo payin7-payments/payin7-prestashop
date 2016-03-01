@@ -30,7 +30,15 @@ class Payin7OrderCancelModuleFrontController extends Payin7OrderRetModuleFrontCo
 {
     public function execute()
     {
-        $order = $this->getVerifyOrder(false);
+        // check if POST
+        $this->verifyIsPost();
+
+        $order = $this->getVerifyOrder();
+
+        // if we have a REJECT flag - set a cookie which would prevent the user of seeing the payment methods
+        if ($this->_is_rejected) {
+            $this->module->setRejectCookie(true);
+        }
 
         /** @var OrderCore $orderm */
         /** @noinspection PhpUndefinedClassInspection */

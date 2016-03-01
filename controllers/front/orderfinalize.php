@@ -30,6 +30,10 @@ class Payin7OrderFinalizeModuleFrontController extends Payin7BaseModuleFrontCont
 {
     public function execute()
     {
+        if (!isset($_POST)) {
+            $this->handleError($this->module->l('Invalid Request'), self::RESP_REQUEST_ERR);
+        }
+
         $uid = Tools::getValue('order_id');
 
         if (!$uid) {
@@ -44,16 +48,17 @@ class Payin7OrderFinalizeModuleFrontController extends Payin7BaseModuleFrontCont
             $this->handleError($this->module->l('Invalid Order'), self::RESP_INVALID_ORDER_ERR);
         }
 
-        if (!$order->getPayin7OrderSent() || $order->getPayin7OrderAccepted()) {
+        /*if (!$order->getPayin7OrderSent() || $order->getPayin7OrderAccepted()) {
             $this->handleError($this->module->l('Order already processed'), self::RESP_INVALID_ORDER_ERR);
-        }
+        }*/
 
         /** @noinspection PhpUndefinedMethodInspection */
         $order_data = $order_data = array(
             'orderId' => $order->getPayin7OrderIdentifier(),
             'orderUrl' => $this->module->getFrontendOrderCompleteUrl($order,
                 false,
-                $this->module->getShouldUseSecureConnection()),
+                $this->module->getShouldUseSecureConnection(),
+                true),
             'cancelUrl' => $this->module->getModuleLink('ordercancel',
                 array(
                     'order_id' => $uid,

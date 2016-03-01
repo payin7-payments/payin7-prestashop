@@ -57,6 +57,7 @@ abstract class Payin7BaseModuleFrontController extends ModuleFrontController
     const RESP_ACCESS_DENIED_NO_CUST_MATCH = 31;
     const RESP_INVALID_ORDER_ERR = 50;
     const RESP_INVALID_ORDER_STATE_ERR = 51;
+    const RESP_INVALID_ORDER_HASH_ERR = 52;
     const RESP_ORDER_SUBMIT_ERR = 60;
 
     protected $debug;

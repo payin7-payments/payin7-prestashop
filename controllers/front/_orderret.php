@@ -30,6 +30,16 @@ abstract class Payin7OrderRetModuleFrontController extends Payin7BaseModuleFront
 {
     protected $_is_checkout;
 
+    /** @var \Payin7\Models\OrderModel */
+    protected $_order;
+
+    protected $_order_id;
+    protected $_is_verified;
+    protected $_is_rejected;
+    protected $_is_cancelled;
+    protected $_is_paid;
+    protected $_order_state;
+
     protected function handleError($message, $code, $force_redirect = false)
     {
         if (!$this->redirect_on_error && !$force_redirect) {
@@ -44,10 +54,49 @@ abstract class Payin7OrderRetModuleFrontController extends Payin7BaseModuleFront
         }
     }
 
+    protected function verifyHashCheck()
+    {
+        $is_sandbox_order = $this->_order->getPayin7SandboxOrder();
+        $secure_key = Tools::getValue('secure_key');
+        $hash_check = Tools::GetValue('hash');
+
+        if (!$hash_check || !$this->_order_id) {
+            return false;
+        }
+
+        $api_key = $is_sandbox_order ?
+            $this->module->getConfigApiSandboxKey() :
+            $this->module->getConfigApiProductionKey();
+
+        $gen_key = sha1(
+            $secure_key .
+            $this->_order_id .
+            (int)$this->_is_verified .
+            (int)$this->_is_rejected .
+            (int)$this->_is_cancelled .
+            (int)$this->_is_paid .
+            $this->_order_state .
+            $api_key);
+
+        return ($hash_check == $gen_key);
+    }
+
+    protected function verifyIsPost()
+    {
+        if (!isset($_POST)) {
+            $this->handleError($this->module->l('Invalid Request'), self::RESP_REQUEST_ERR);
+        }
+    }
+
     protected function getVerifyOrder($verify_key = true)
     {
         $order_id = Tools::getValue('order_id');
         $secure_key = Tools::getValue('secure_key');
+        $this->_is_verified = (bool)Tools::GetValue('verified');
+        $this->_is_rejected = (bool)Tools::GetValue('rejected');
+        $this->_is_cancelled = (bool)Tools::GetValue('cancelled');
+        $this->_is_paid = (bool)Tools::GetValue('paid');
+        $this->_order_state = Tools::GetValue('state');
 
         $saved_order = (bool)Tools::getValue('saved_order');
         $this->_is_checkout = !$saved_order;
@@ -71,6 +120,14 @@ abstract class Payin7OrderRetModuleFrontController extends Payin7BaseModuleFront
             if (!$key_verified) {
                 $this->handleError($this->module->l('Invalid Order'), self::RESP_INVALID_ORDER_ERR);
             }
+        }
+
+        $this->_order = $order;
+        $this->_order_id = $order_id;
+
+        // check the hash check
+        if (!$this->verifyHashCheck()) {
+            $this->handleError($this->module->l('Security Problem'), self::RESP_INVALID_ORDER_HASH_ERR);
         }
 
         return $order;
