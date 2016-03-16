@@ -37,6 +37,8 @@ if (!defined('_PS_VERSION_'))
  */
 class Payin7 extends PaymentModule
 {
+    const PLUGIN_VERSION = '1.0.1';
+
     const SETTINGS_FORM_NAME = 'submitPayin7Settings';
 
     const CFG_DEFAULT_PAYIN7_API_SERVER_HOSTNAME = 'payin7.com';
@@ -52,6 +54,7 @@ class Payin7 extends PaymentModule
     const PM_UNAV_COUNTRY_UNSUPPORTED = 14;
     const PM_UNAV_MIN_ORDER_STORE_NOTMET = 15;
     const PM_UNAV_MAX_ORDER_STORE_NOTMET = 16;
+    const PM_UNAV_METHOD_DISABLED = 17;
 
     const SERVICE_API = 1;
     const SERVICE_BACKEND = 2;
@@ -101,7 +104,7 @@ class Payin7 extends PaymentModule
     {
         $this->name = 'payin7';
         $this->tab = 'payments_gateways';
-        $this->version = '1.0.0';
+        $this->version = self::PLUGIN_VERSION;
         $this->author = 'payin7';
         $this->need_instance = 0;
         $this->bootstrap = true;
@@ -743,6 +746,15 @@ class Payin7 extends PaymentModule
         }
 
         $payment_method_cfg = $remote_platform_config->getPaymentMethodConfig($payment_method_code);
+
+        $is_customer_disabled = isset($payment_method_cfg['is_disabled']) ?
+            (bool)$payment_method_cfg['is_disabled'] :
+            null;
+
+        if ($is_customer_disabled) {
+            $reason = self::PM_UNAV_METHOD_DISABLED;
+            return false;
+        }
 
         $min_order_allowed_platform = isset($payment_method_cfg['minimum_amount']) ?
             (double)$payment_method_cfg['minimum_amount'] :
