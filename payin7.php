@@ -598,20 +598,8 @@ class Payin7 extends PaymentModule
 
     public function hookActionAdminControllerSetMedia()
     {
-<<<<<<< HEAD
-        $this->context->controller->addCSS($this->_path . 'views/css/payin7_admin.css');
-
-        if ($this->getConfigApiDebugMode()) {
-            $this->context->controller->addJS($this->_path . 'views/js/utils.js');
-=======
-        $this->context->controller->addCSS($this->_path . '/views/css/payin7_admin' .
-            ($this->getConfigApiDebugMode() ? null : '-' . self::JSCSSMIN_VER) . '.css');
-
-        if ($this->getConfigApiDebugMode()) {
-            $this->context->controller->addJS($this->_path . '/views/js/utils' .
-                ($this->getConfigApiDebugMode() ? null : '-' . self::JSCSSMIN_VER) . '.js');
->>>>>>> d4c6b1539962ed8dbc8ff710848c21157f119c24
-        }
+        $this->context->controller->addCSS($this->_path . 'views/css/payin7_admin' .
+            ($this->getConfigApiDebugMode() ? null : '-' . self::JSCSSMIN_VER . '.min') . '.css');
     }
 
     public function hookTop()
@@ -627,24 +615,14 @@ class Payin7 extends PaymentModule
 
     public function hookHeader()
     {
-<<<<<<< HEAD
-        $this->context->controller->addCSS($this->_path . 'views/css/payin7.css');
-=======
-        $this->context->controller->addCSS($this->_path . '/views/css/payin7' .
-            ($this->getConfigApiDebugMode() ? null : '-' . self::JSCSSMIN_VER) . '.css');
->>>>>>> d4c6b1539962ed8dbc8ff710848c21157f119c24
+        $this->context->controller->addCSS($this->_path . 'views/css/payin7' .
+            ($this->getConfigApiDebugMode() ? null : '-' . self::JSCSSMIN_VER . '.min') . '.css');
     }
 
     public function hookFooter()
     {
-        if ($this->getConfigApiDebugMode()) {
-<<<<<<< HEAD
-            $this->context->controller->addJS($this->_path . 'views/js/utils.js');
-=======
-            $this->context->controller->addJS($this->_path . '/views/js/utils' .
-                ($this->getConfigApiDebugMode() ? null : '-' . self::JSCSSMIN_VER) . '.js');
->>>>>>> d4c6b1539962ed8dbc8ff710848c21157f119c24
-        }
+        $this->context->controller->addJS($this->_path . 'views/js/utils' .
+            ($this->getConfigApiDebugMode() ? null : '-' . self::JSCSSMIN_VER . '.min') . '.js');
     }
 
     public function hookUpdateOrderStatus($params)
