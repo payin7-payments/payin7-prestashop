@@ -65,6 +65,8 @@ class Payin7 extends PaymentModule
 
     const REJECT_COOKIE_NAME = 'p7rj';
 
+    const JSCSSMIN_VER = '1454762769000';
+
     /** PAID actually means accepted after verification (it may not really be paid for some payment methods */
     const PAYIN7_ORDER_STATE_PAID = 'paid';
     const PAYIN7_ORDER_STATE_CANCELLED = 'cancelled';
@@ -596,10 +598,12 @@ class Payin7 extends PaymentModule
 
     public function hookActionAdminControllerSetMedia()
     {
-        $this->context->controller->addCSS($this->_path . '/views/css/payin7_admin.css');
+        $this->context->controller->addCSS($this->_path . '/views/css/payin7_admin' .
+            ($this->getConfigApiDebugMode() ? null : '-' . self::JSCSSMIN_VER) . '.css');
 
         if ($this->getConfigApiDebugMode()) {
-            $this->context->controller->addJS($this->_path . '/views/js/utils.js');
+            $this->context->controller->addJS($this->_path . '/views/js/utils' .
+                ($this->getConfigApiDebugMode() ? null : '-' . self::JSCSSMIN_VER) . '.js');
         }
     }
 
@@ -616,13 +620,15 @@ class Payin7 extends PaymentModule
 
     public function hookHeader()
     {
-        $this->context->controller->addCSS($this->_path . '/views/css/payin7.css');
+        $this->context->controller->addCSS($this->_path . '/views/css/payin7' .
+            ($this->getConfigApiDebugMode() ? null : '-' . self::JSCSSMIN_VER) . '.css');
     }
 
     public function hookFooter()
     {
         if ($this->getConfigApiDebugMode()) {
-            $this->context->controller->addJS($this->_path . '/views/js/utils.js');
+            $this->context->controller->addJS($this->_path . '/views/js/utils' .
+                ($this->getConfigApiDebugMode() ? null : '-' . self::JSCSSMIN_VER) . '.js');
         }
     }
 
