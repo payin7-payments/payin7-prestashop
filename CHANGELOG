@@ -8,4 +8,8 @@ All rights Reserved, Payin7 S.L. 2016
 
 1.0.0 (2016-02-01)
 
- - initial release
+- initial release
+
+1.0.1 (2016-03-16)
+
+- ability to disable payment methods per store
