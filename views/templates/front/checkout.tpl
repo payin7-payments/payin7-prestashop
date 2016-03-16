@@ -27,7 +27,7 @@
     {if !$is15up}
         <p class="payment_module payin7" data-code="{$payment_method.code|escape:'html':'UTF-8'}">
 
-            <a class="pay" href="#"
+            <a class="pay"
                title="{$payment_method.title|escape:'html':'UTF-8'}">
                 {if $payment_method.is_unavailable}<span style="font-weight:bold; color:red;">UNAVAILABLE,
                     reason: {$payment_method.unavailability_reason|escape:'html':'UTF-8'}</span>{/if}
@@ -58,7 +58,7 @@
                 <p class="payment_module payin7" id="payin7_payment_button"
                    data-code="{$payment_method.code|escape:'html':'UTF-8'}">
 
-                    <a class="pay" href="#"
+                    <a class="pay"
                        title="{$payment_method.title|escape:'html':'UTF-8'}">
                         {if $payment_method.is_unavailable}<span style="font-weight:bold; color:red;">UNAVAILABLE,
                             reason: {$payment_method.unavailability_reason|escape:'html':'UTF-8'}</span>{/if}

@@ -598,12 +598,19 @@ class Payin7 extends PaymentModule
 
     public function hookActionAdminControllerSetMedia()
     {
+<<<<<<< HEAD
+        $this->context->controller->addCSS($this->_path . 'views/css/payin7_admin.css');
+
+        if ($this->getConfigApiDebugMode()) {
+            $this->context->controller->addJS($this->_path . 'views/js/utils.js');
+=======
         $this->context->controller->addCSS($this->_path . '/views/css/payin7_admin' .
             ($this->getConfigApiDebugMode() ? null : '-' . self::JSCSSMIN_VER) . '.css');
 
         if ($this->getConfigApiDebugMode()) {
             $this->context->controller->addJS($this->_path . '/views/js/utils' .
                 ($this->getConfigApiDebugMode() ? null : '-' . self::JSCSSMIN_VER) . '.js');
+>>>>>>> d4c6b1539962ed8dbc8ff710848c21157f119c24
         }
     }
 
@@ -620,15 +627,23 @@ class Payin7 extends PaymentModule
 
     public function hookHeader()
     {
+<<<<<<< HEAD
+        $this->context->controller->addCSS($this->_path . 'views/css/payin7.css');
+=======
         $this->context->controller->addCSS($this->_path . '/views/css/payin7' .
             ($this->getConfigApiDebugMode() ? null : '-' . self::JSCSSMIN_VER) . '.css');
+>>>>>>> d4c6b1539962ed8dbc8ff710848c21157f119c24
     }
 
     public function hookFooter()
     {
         if ($this->getConfigApiDebugMode()) {
+<<<<<<< HEAD
+            $this->context->controller->addJS($this->_path . 'views/js/utils.js');
+=======
             $this->context->controller->addJS($this->_path . '/views/js/utils' .
                 ($this->getConfigApiDebugMode() ? null : '-' . self::JSCSSMIN_VER) . '.js');
+>>>>>>> d4c6b1539962ed8dbc8ff710848c21157f119c24
         }
     }
 
@@ -725,6 +740,7 @@ class Payin7 extends PaymentModule
 
         /** @var Payin7\Models\PlatformStatusModel $remote_platform_status */
         $remote_platform_status = $this->getModelInstance('platform_status');
+        $remote_platform_status->loadData();
 
         $platform_is_available = $remote_platform_status->getIsPlatformAvailable() &&
             $remote_platform_status->getIsPaymentMethodAvailable($payment_method_code);
@@ -738,6 +754,7 @@ class Payin7 extends PaymentModule
 
         /** @var Payin7\Models\PlatformConfigModel $remote_platform_config */
         $remote_platform_config = $this->getModelInstance('platform_config');
+        $remote_platform_config->loadData();
 
         // check if the platform constraints are met
 
@@ -810,6 +827,7 @@ class Payin7 extends PaymentModule
     {
         /** @var Payin7\Models\PlatformConfigModel $remote_platform_config */
         $remote_platform_config = $this->getModelInstance('platform_config');
+        $remote_platform_config->loadData();
 
         $payment_method_cfg = $remote_platform_config->getPaymentMethodConfig($payment_method);
 
@@ -1057,6 +1075,7 @@ class Payin7 extends PaymentModule
 
         /** @var Payin7\Models\PlatformConfigModel $remote_platform_config */
         $remote_platform_config = $this->getModelInstance('platform_config');
+        $remote_platform_config->loadData();
 
         // prepare the quote
         $quote = $this->prepareCartQuote();
