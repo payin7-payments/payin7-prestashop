@@ -1,0 +1,72 @@
+#!/bin/bash
+
+if [[ $# -eq 0 ]] ; then
+    echo "No version supplied"
+    exit 1
+fi
+
+echo Making a new release - ver: $1
+
+VER=$1
+ARCHIVE_NAME="payin7"
+REL_DIR="releases/$VER"
+ARCHIVE_DIR="./$REL_DIR/$ARCHIVE_NAME"
+FNAME="$ARCHIVE_DIR.zip"
+ZIPNAME="$ARCHIVE_NAME.zip"
+
+if [ -f $FNAME ]; then
+    echo "Version $VER already exists"
+    exit 2
+fi
+
+##################################################
+
+MKDIR="mkdir -p"
+RM="rm -rf"
+CP="cp -R"
+ZIP="zip -rq"
+GIT="git"
+
+CDIR=`pwd`
+
+CONTENTS="CHANGELOG \
+LICENSE \
+README.md \
+_ctrlexec.php \
+backward_compatibility \
+classes \
+config.xml \
+config_es.xml \
+controllers \
+index.php \
+logo.gif \
+logo.png \
+models \
+ordercancel.php \
+orderfinalize.php \
+ordersuccess.php \
+ordervalidate.php \
+payin7.php \
+translations \
+upgrade \
+views"
+
+$RM $ARCHIVE_DIR || exit 3
+$MKDIR $ARCHIVE_DIR || exit 3
+
+for i in $(echo $CONTENTS | tr " " " ")
+do
+    $CP "$i" $ARCHIVE_DIR || exit 4
+done
+
+cd $REL_DIR
+$ZIP $ZIPNAME $ARCHIVE_NAME || exit 5
+$RM $ARCHIVE_NAME
+cd $CDIR
+
+$GIT add $REL_DIR
+$GIT commit -am "Added version $VER"
+$GIT push
+
+echo "Done - version $VER to ve found in: $FNAME"
+exit 0
