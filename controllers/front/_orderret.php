@@ -46,7 +46,7 @@ abstract class Payin7OrderRetModuleFrontController extends Payin7BaseModuleFront
             throw new Exception($message, self::RESP_ERR_BASE + $code);
         } else {
             if ($this->_is_checkout) {
-                Tools::redirect('/index.php?controller=order&step=1');
+                Tools::redirect($this->getControllerOrderUrl());
             } else {
                 Tools::redirect('/index.php?controller=order-history');
             }

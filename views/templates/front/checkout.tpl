@@ -27,7 +27,7 @@
     {if !$is15up}
         <p class="payment_module payin7" data-code="{$payment_method.code|escape:'html':'UTF-8'}">
 
-            <a class="pay"
+            <a class="pay" href="{$payment_method.url}"
                title="{$payment_method.title|escape:'html':'UTF-8'}">
                 {if $payment_method.is_unavailable}<span style="font-weight:bold; color:red;">UNAVAILABLE,
                     reason: {$payment_method.unavailability_reason|escape:'html':'UTF-8'}</span>{/if}
@@ -58,7 +58,7 @@
                 <p class="payment_module payin7" id="payin7_payment_button"
                    data-code="{$payment_method.code|escape:'html':'UTF-8'}">
 
-                    <a class="pay"
+                    <a class="pay" href="{$payment_method.url}"
                        title="{$payment_method.title|escape:'html':'UTF-8'}">
                         {if $payment_method.is_unavailable}<span style="font-weight:bold; color:red;">UNAVAILABLE,
                             reason: {$payment_method.unavailability_reason|escape:'html':'UTF-8'}</span>{/if}
@@ -96,6 +96,15 @@
 <!-- Payin7 -->
 <script>
     //<![CDATA[
+    var payin7ScriptSrc = {$payin7_script_src};
+    {literal}
+    (function(a,b,c,d,e,f,g){a['Payin7SDKObject']=e;a[e]=a[e]||function(){
+                (a[e].q=a[e].q||[]).push(arguments)};a[e].l=1*new Date();f=b.createElement(c);
+        g=b.getElementsByTagName(c)[0];f.async=1;f.src=d;g.parentNode.insertBefore(f,g)
+    })(window,document,'script',payin7ScriptSrc,'Payin7SDK');
+    {/literal}
+
+    Payin7SDK('init', {$js_config});
     Payin7SDK('checkout', {$checkout_options});
     //]]>
 </script>

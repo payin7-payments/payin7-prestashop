@@ -37,7 +37,7 @@ if (!defined('_PS_VERSION_'))
  */
 class Payin7 extends PaymentModule
 {
-    const PLUGIN_VERSION = '1.0.1';
+    const PLUGIN_VERSION = '1.0.2';
 
     const SETTINGS_FORM_NAME = 'submitPayin7Settings';
 
@@ -605,12 +605,18 @@ class Payin7 extends PaymentModule
             ($this->getConfigApiDebugMode() ? null : '-' . self::JSCSSMIN_VER . '.min') . '.css');
     }
 
-    public function hookTop()
+    public function getPayin7SDKTemplateParams()
     {
-        $this->context->smarty->assign(array(
+        return array(
             'payin7_script_src' => json_encode($this->getJsApiUrl('/payin7.js')),
             'js_config' => json_encode($this->getJsConfig())
-        ));
+        );
+    }
+
+    public function hookTop()
+    {
+        /** @noinspection PhpUndefinedMethodInspection */
+        $this->smarty->assign($this->getPayin7SDKTemplateParams());
 
         /** @noinspection PhpUndefinedMethodInspection */
         return $this->display(__FILE__, 'views/templates/front/top.tpl');
@@ -1072,6 +1078,8 @@ class Payin7 extends PaymentModule
 
         $payment_methods = $this->getPaymentMethods();
 
+        $payment_method_public_cfg = array();
+
         if ($payment_methods) {
             $is_debug = $this->getConfigApiDebugMode();
 
@@ -1089,6 +1097,15 @@ class Payin7 extends PaymentModule
                 $payment_methods[$method]['remote_config'] = $remote_platform_config->getPaymentMethodConfig($method);
                 $payment_methods[$method]['is_unavailable'] = !$is_available;
                 $payment_methods[$method]['unavailability_reason'] = $unav_reason;
+                $payment_methods[$method]['url'] = $this->getModuleLink(
+                    'ordervalidate',
+                    array('payment_method' => $method),
+                    $this->getShouldUseSecureConnection()
+                );
+
+                $payment_method_public_cfg[$method]['code'] = $method;
+                $payment_method_public_cfg[$method]['logo'] = isset($payment_methods[$method]['remote_config']['logo']) ?
+                    $payment_methods[$method]['remote_config']['logo'] : null;
 
                 unset($method, $method_data);
             }
@@ -1096,15 +1113,16 @@ class Payin7 extends PaymentModule
 
         if ($payment_methods && $quote) {
             /** @noinspection PhpUndefinedMethodInspection */
-            $this->smarty->assign(array(
+            $this->smarty->assign(array_merge($this->getPayin7SDKTemplateParams(), array(
                 'payment_methods' => $payment_methods,
                 'is15up' => $this->_is15up,
                 'checkout_options' => json_encode(array(
+                    'paymentMethodsCfg' => $payment_method_public_cfg,
                     'submitFormAction' => $this->getModuleLink('ordervalidate', array(),
                         $this->getShouldUseSecureConnection())
                 )),
                 'is16up' => version_compare(_PS_VERSION_, "1.6", ">=")
-            ));
+            )));
 
             /** @noinspection PhpUndefinedMethodInspection */
             return $this->display(__FILE__, 'views/templates/front/checkout.tpl');

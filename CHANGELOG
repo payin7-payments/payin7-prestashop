@@ -13,3 +13,8 @@ All rights Reserved, Payin7 S.L. 2016
 1.0.1 (2016-03-16)
 
 - ability to disable payment methods per store
+
+1.0.2 (2016-03-18)
+
+- compatibility with one page checkout process / onepagecheckoutps responsive plugin
+- bugfixes

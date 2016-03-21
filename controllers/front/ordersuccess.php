@@ -59,9 +59,9 @@ class Payin7OrderSuccessModuleFrontController extends Payin7OrderRetModuleFrontC
             }
         }
 
-        $this->context->smarty->assign(array(
+        $this->context->smarty->assign(array_merge($this->module->getPayin7SDKTemplateParams(), array(
             'order_identifier' => json_encode($order->getPayin7OrderIdentifier())
-        ));
+        )));
 
         if ($this->module->getIsPrestashop14()) {
             $this->context->smarty->display(_PS_MODULE_DIR_ . 'payin7/views/templates/front/success.tpl');

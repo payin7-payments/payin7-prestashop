@@ -74,9 +74,9 @@ class Payin7OrderFinalizeModuleFrontController extends Payin7BaseModuleFrontCont
             'isCheckout' => true
         );
 
-        $this->context->smarty->assign(array(
+        $this->context->smarty->assign(array_merge($this->module->getPayin7SDKTemplateParams(), array(
             'order_data' => json_encode($order_data),
-        ));
+        )));
 
         if ($this->module->getIsPrestashop14()) {
             $this->context->smarty->display(_PS_MODULE_DIR_ . 'payin7/views/templates/front/finalize.tpl');

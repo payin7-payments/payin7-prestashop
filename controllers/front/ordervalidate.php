@@ -30,9 +30,10 @@ class Payin7OrderValidateModuleFrontController extends Payin7BaseModuleFrontCont
 {
     public function execute()
     {
-        if (!isset($_POST)) {
+        // this can be called both by GET / POST
+        /*if (!isset($_POST)) {
             $this->handleError($this->module->l('Invalid Request'), self::RESP_REQUEST_ERR);
-        }
+        }*/
 
         $payment_method = Tools::getValue('payment_method');
 

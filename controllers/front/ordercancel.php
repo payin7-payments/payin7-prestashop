@@ -61,6 +61,6 @@ class Payin7OrderCancelModuleFrontController extends Payin7OrderRetModuleFrontCo
         /** @noinspection PhpUndefinedClassInspection */
         $this->restoreOrderToCart(new Cart($orderm->id_cart));
 
-        Tools::redirect('/index.php?controller=order&step=1');
+        Tools::redirect($this->getControllerOrderUrl());
     }
 }

@@ -90,12 +90,18 @@ abstract class Payin7BaseModuleFrontController extends ModuleFrontController
         return $this->execute();
     }
 
+    protected function getControllerOrderUrl()
+    {
+        $multi_shipping = Tools::getValue('multi-shipping');
+        return 'index.php?controller=order' . ($multi_shipping ? '&multi-shipping=' . $multi_shipping : null);
+    }
+
     protected function handleError($message, $code, $force_redirect = false)
     {
         if (!$this->redirect_on_error && !$force_redirect) {
             throw new Exception($message, self::RESP_ERR_BASE + $code);
         } else {
-            Tools::redirect('/index.php?controller=order&step=1');
+            Tools::redirect($this->getControllerOrderUrl());
             exit(0);
         }
     }
