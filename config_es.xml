@@ -28,7 +28,7 @@
 <module>
     <name>payin7</name>
     <displayName><![CDATA[Payin7]]></displayName>
-    <version><![CDATA[1.0.2]]></version>
+    <version><![CDATA[1.0.3]]></version>
     <description><![CDATA[&iexcl;Financie sus sue&ntilde;os!]]></description>
     <author><![CDATA[payin7]]></author>
     <tab><![CDATA[payments_gateways]]></tab>

@@ -18,3 +18,8 @@ All rights Reserved, Payin7 S.L. 2016
 
 - compatibility with one page checkout process / onepagecheckoutps responsive plugin
 - bugfixes
+
+1.0.3 (2016-03-29)
+
+- compatibility with PHP 5.3.4 and up
+- bugfixes

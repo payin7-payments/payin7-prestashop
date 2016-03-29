@@ -37,7 +37,8 @@ if (!defined('_PS_VERSION_'))
  */
 class Payin7 extends PaymentModule
 {
-    const PLUGIN_VERSION = '1.0.2';
+    const PLUGIN_VERSION = '1.0.3';
+    const MIN_PHP_VER = '5.3.3';
 
     const SETTINGS_FORM_NAME = 'submitPayin7Settings';
 
@@ -172,6 +173,11 @@ class Payin7 extends PaymentModule
 
     public function install()
     {
+        // check the PHP version
+        if (!version_compare(phpversion(), self::MIN_PHP_VER, '>=')) {
+            return false;
+        }
+
         /** @noinspection PhpUndefinedClassInspection */
         Configuration::updateValue('PAYIN7_API_SERVER_HOSTNAME', self::CFG_DEFAULT_PAYIN7_API_SERVER_HOSTNAME);
         /** @noinspection PhpUndefinedClassInspection */
