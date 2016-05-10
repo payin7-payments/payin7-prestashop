@@ -23,3 +23,13 @@ All rights Reserved, Payin7 S.L. 2016
 
 - compatibility with PHP 5.3.4 and up
 - bugfixes
+
+1.0.4 (2016-05-10)
+
+- introduced three new states specific to Payin7 orders for pending, accepted and canceled orders and made them used by default:
+
+PAYIN7_OS_PENDING - For pending orders
+PAYIN7_OS_ACCEPTED - For accepted / paid orders
+PAYIN7_OS_CANCELLED - For canceled orders
+
+- disabled internal prestashop emails when checking out with Payin7 to prevent customer / store confusion if payin7 orders do not get completed

@@ -37,7 +37,7 @@ if (!defined('_PS_VERSION_'))
  */
 class Payin7 extends PaymentModule
 {
-    const PLUGIN_VERSION = '1.0.3';
+    const PLUGIN_VERSION = '1.0.4';
     const MIN_PHP_VER = '5.3.3';
 
     const SETTINGS_FORM_NAME = 'submitPayin7Settings';
@@ -185,12 +185,20 @@ class Payin7 extends PaymentModule
         /** @noinspection PhpUndefinedClassInspection */
         Configuration::updateValue('PAYIN7_API_USE_SECURE', self::CFG_DEFAULT_PAYIN7_API_USE_SECURE);
 
+        // create the custom payin7 order states
+        $this->createCustomOrderStates();
+
+        // previously - PS_OS_CHEQUE
         /** @noinspection PhpUndefinedClassInspection */
-        Configuration::updateValue('PAYIN7_ID_ORDER_STATE_PENDING', Configuration::get('PS_OS_CHEQUE'));
+        Configuration::updateValue('PAYIN7_ID_ORDER_STATE_PENDING', Configuration::get('PAYIN7_OS_PENDING'));
+
+        // previously - PS_OS_PAYMENT
         /** @noinspection PhpUndefinedClassInspection */
-        Configuration::updateValue('PAYIN7_ID_ORDER_STATE_ACCEPTED', Configuration::get('PS_OS_PAYMENT'));
+        Configuration::updateValue('PAYIN7_ID_ORDER_STATE_ACCEPTED', Configuration::get('PAYIN7_OS_ACCEPTED'));
+
+        // previously - PS_OS_CANCELED
         /** @noinspection PhpUndefinedClassInspection */
-        Configuration::updateValue('PAYIN7_ID_ORDER_STATE_CANCELLED', Configuration::get('PS_OS_CANCELED'));
+        Configuration::updateValue('PAYIN7_ID_ORDER_STATE_CANCELLED', Configuration::get('PAYIN7_OS_CANCELLED'));
 
         /** @noinspection PhpUndefinedClassInspection */
         if (!parent::install()) {
@@ -215,9 +223,104 @@ class Payin7 extends PaymentModule
             $this->registerHook('paymentReturn') &&
             $this->registerHook('footer') &&
             $this->registerHook('adminOrder') &&
-            $this->registerHook('updateOrderStatus');
+            $this->registerHook('updateOrderStatus') &&
+            $this->registerHook('newOrder');
+
+        // manually run upgrades for backward compatibility
+        $this->runUpgrades(true);
 
         return $ret;
+    }
+
+    /**
+     * Launch upgrade process
+     */
+    public function runUpgrades($install = false)
+    {
+        if (version_compare(_PS_VERSION_, '1.5', '<')) {
+            foreach (array('1.0.4') as $version) {
+                $file = dirname(__FILE__) . '/upgrade/install-' . $version . '.php';
+                if (version_compare(Configuration::get('PAYIN7_VERSION'), $version, '<') && file_exists($file)) {
+                    include_once $file;
+                    call_user_func('upgrade_module_' . str_replace('.', '_', $version), $this, $install);
+                }
+            }
+        }
+    }
+
+    public function createCustomOrderStates()
+    {
+        /** @noinspection PhpUndefinedClassInspection */
+        if (!Configuration::get('PAYIN7_OS_PENDING')) {
+            // PAYIN7_OS_PENDING
+            /** @noinspection PhpUndefinedClassInspection */
+            $OrderState = new OrderState();
+            $OrderState->name = array_fill(0, 10, 'Awaiting Payin7 acceptance');
+            $OrderState->send_email = 0;
+            $OrderState->module_name = 'payin7';
+            $OrderState->invoice = 0;
+            $OrderState->logable = 0;
+            $OrderState->color = '#2A5E8E';
+            $OrderState->unremovable = true;
+            /** @noinspection PhpUndefinedMethodInspection */
+            $OrderState->save();
+
+            /** @noinspection PhpUndefinedClassInspection */
+            /** @noinspection PhpUndefinedFieldInspection */
+            Configuration::updateValue('PAYIN7_OS_PENDING', $OrderState->id);
+        }
+
+        /** @noinspection PhpUndefinedClassInspection */
+        if (!Configuration::get('PAYIN7_OS_ACCEPTED')) {
+            // PAYIN7_OS_ACCEPTED
+            /** @noinspection PhpUndefinedClassInspection */
+            $OrderState = new OrderState();
+            $OrderState->name = array_fill(0, 10, 'Payin7 accepted');
+            $OrderState->send_email = 0;
+            $OrderState->module_name = 'payin7';
+            $OrderState->invoice = 0;
+            $OrderState->logable = 0;
+            $OrderState->color = '#32CD32';
+            $OrderState->unremovable = true;
+            /** @noinspection PhpUndefinedMethodInspection */
+            $OrderState->save();
+
+            /** @noinspection PhpUndefinedClassInspection */
+            /** @noinspection PhpUndefinedFieldInspection */
+            Configuration::updateValue('PAYIN7_OS_ACCEPTED', $OrderState->id);
+        }
+
+        /** @noinspection PhpUndefinedClassInspection */
+        if (!Configuration::get('PAYIN7_OS_CANCELLED')) {
+            // PAYIN7_OS_CANCELLED
+            /** @noinspection PhpUndefinedClassInspection */
+            $OrderState = new OrderState();
+            $OrderState->name = array_fill(0, 10, 'Payin7 canceled');
+            $OrderState->send_email = 0;
+            $OrderState->module_name = 'payin7';
+            $OrderState->invoice = 0;
+            $OrderState->logable = 0;
+            $OrderState->color = '#DC143C';
+            $OrderState->unremovable = true;
+            /** @noinspection PhpUndefinedMethodInspection */
+            $OrderState->save();
+
+            /** @noinspection PhpUndefinedClassInspection */
+            /** @noinspection PhpUndefinedFieldInspection */
+            Configuration::updateValue('PAYIN7_OS_CANCELLED', $OrderState->id);
+        }
+
+        // previously - PS_OS_CHEQUE
+        /** @noinspection PhpUndefinedClassInspection */
+        Configuration::updateValue('PAYIN7_ID_ORDER_STATE_PENDING', Configuration::get('PAYIN7_OS_PENDING'));
+
+        // previously - PS_OS_PAYMENT
+        /** @noinspection PhpUndefinedClassInspection */
+        Configuration::updateValue('PAYIN7_ID_ORDER_STATE_ACCEPTED', Configuration::get('PAYIN7_OS_ACCEPTED'));
+
+        // previously - PS_OS_CANCELED
+        /** @noinspection PhpUndefinedClassInspection */
+        Configuration::updateValue('PAYIN7_ID_ORDER_STATE_CANCELLED', Configuration::get('PAYIN7_OS_CANCELLED'));
     }
 
     public function uninstall()
@@ -251,6 +354,13 @@ class Payin7 extends PaymentModule
         /** @noinspection PhpUndefinedClassInspection */
         Configuration::deleteByName('PAYIN7_ID_ORDER_STATE_CANCELLED');
 
+        /** @noinspection PhpUndefinedClassInspection */
+        Configuration::deleteByName('PAYIN7_OS_PENDING');
+        /** @noinspection PhpUndefinedClassInspection */
+        Configuration::deleteByName('PAYIN7_OS_ACCEPTED');
+        /** @noinspection PhpUndefinedClassInspection */
+        Configuration::deleteByName('PAYIN7_OS_CANCELLED');
+
         $this->uninstallDb();
 
         /** @noinspection PhpUndefinedClassInspection */
@@ -279,6 +389,16 @@ class Payin7 extends PaymentModule
         Db::getInstance()->execute('DROP TABLE `' . _DB_PREFIX_ . 'payin7_order`');
         /** @noinspection PhpUndefinedClassInspection */
         Db::getInstance()->execute('DROP TABLE `' . _DB_PREFIX_ . 'payin7_order_history`');
+
+        // remove payin7 order states
+        $sql = 'DELETE FROM `' . _DB_PREFIX_ . 'order_state_lang` WHERE id_order_state IN (
+        SELECT a.id_order_state FROM `' . _DB_PREFIX_ . 'order_state` a WHERE a.module_name = \'payin7\')';
+        /** @noinspection PhpUndefinedClassInspection */
+        Db::getInstance()->execute($sql);
+
+        $sql = 'DELETE FROM `' . _DB_PREFIX_ . 'order_state` WHERE module_name = \'payin7\'';
+        /** @noinspection PhpUndefinedClassInspection */
+        Db::getInstance()->execute($sql);
     }
 
     protected function installDb()
@@ -640,6 +760,16 @@ class Payin7 extends PaymentModule
             ($this->getConfigApiDebugMode() ? null : '-' . self::JSCSSMIN_VER . '.min') . '.js');
     }
 
+    public function hookNewOrder($params)
+    {
+        // prevent sending an email to the customer upon checking out with Payin7
+        // as the order is actually NOT complete yet (but prestashop believes it is too smart!)
+        if (isset($params['customer'])) {
+            $customer = $params['customer'];
+            $customer->email = null;
+        }
+    }
+
     public function hookUpdateOrderStatus($params)
     {
         // save the changes and flush the history to payin7 - fast
@@ -682,11 +812,13 @@ class Payin7 extends PaymentModule
 
     public function hasRejectCookie()
     {
+        /** @noinspection PhpUndefinedMethodInspection */
         return (bool)$this->context->cookie->__get(self::REJECT_COOKIE_NAME);
     }
 
     public function setRejectCookie($set = true)
     {
+        /** @noinspection PhpUndefinedMethodInspection */
         $this->context->cookie->__set(self::REJECT_COOKIE_NAME, ($set ? true : null));
     }
 
@@ -846,7 +978,9 @@ class Payin7 extends PaymentModule
             return null;
         }
 
-        return Tools::ps_round($price, (int)$this->context->currency->decimals * _PS_PRICE_COMPUTE_PRECISION_);
+        /** @noinspection PhpUndefinedFieldInspection */
+        return Tools::ps_round($price, (int)$this->context->currency->decimals *
+            (defined('_PS_PRICE_COMPUTE_PRECISION_') ? _PS_PRICE_COMPUTE_PRECISION_ : 1));
     }
 
     /**
