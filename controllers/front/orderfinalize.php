@@ -30,6 +30,8 @@ class Payin7OrderFinalizeModuleFrontController extends Payin7BaseModuleFrontCont
 {
     public function execute()
     {
+        $this->module->getLogger()->info(get_class($this) . ': orderfinalize :: ' . print_r($_POST, true));
+
         if (!isset($_POST)) {
             $this->handleError($this->module->l('Invalid Request'), self::RESP_REQUEST_ERR);
         }

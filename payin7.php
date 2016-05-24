@@ -37,7 +37,7 @@ if (!defined('_PS_VERSION_'))
  */
 class Payin7 extends PaymentModule
 {
-    const PLUGIN_VERSION = '1.0.4';
+    const PLUGIN_VERSION = '1.0.5';
     const MIN_PHP_VER = '5.3.3';
 
     const SETTINGS_FORM_NAME = 'submitPayin7Settings';
@@ -46,7 +46,9 @@ class Payin7 extends PaymentModule
     const CFG_DEFAULT_PAYIN7_API_VERSION = 'v1';
     const CFG_DEFAULT_PAYIN7_API_USE_SECURE = true;
 
-    const QUICK_HISTORY_SEND_TIMEOUT = 5;
+    const CFG_DEFAULT_PAYIN7_SBN_ENABLED = true;
+
+    const QUICK_HISTORY_SEND_TIMEOUT = 10;
 
     const PM_UNAV_PLATFORM_UNAVAILABLE = 10;
     const PM_UNAV_CURRENCY_UNSUPPORTED = 11;
@@ -185,6 +187,11 @@ class Payin7 extends PaymentModule
         /** @noinspection PhpUndefinedClassInspection */
         Configuration::updateValue('PAYIN7_API_USE_SECURE', self::CFG_DEFAULT_PAYIN7_API_USE_SECURE);
 
+        /** @noinspection PhpUndefinedClassInspection */
+        Configuration::updateValue('PAYIN7_SBN_ENABLED', self::CFG_DEFAULT_PAYIN7_SBN_ENABLED);
+        /** @noinspection PhpUndefinedClassInspection */
+        Configuration::updateValue('PAYIN7_SBN_SECURE_KEY', '');
+
         // create the custom payin7 order states
         $this->createCustomOrderStates();
 
@@ -240,6 +247,7 @@ class Payin7 extends PaymentModule
         if (version_compare(_PS_VERSION_, '1.5', '<')) {
             foreach (array('1.0.4') as $version) {
                 $file = dirname(__FILE__) . '/upgrade/install-' . $version . '.php';
+                /** @noinspection PhpUndefinedClassInspection */
                 if (version_compare(Configuration::get('PAYIN7_VERSION'), $version, '<') && file_exists($file)) {
                     include_once $file;
                     call_user_func('upgrade_module_' . str_replace('.', '_', $version), $this, $install);
@@ -353,6 +361,11 @@ class Payin7 extends PaymentModule
         Configuration::deleteByName('PAYIN7_ID_ORDER_STATE_ACCEPTED');
         /** @noinspection PhpUndefinedClassInspection */
         Configuration::deleteByName('PAYIN7_ID_ORDER_STATE_CANCELLED');
+
+        /** @noinspection PhpUndefinedClassInspection */
+        Configuration::deleteByName('PAYIN7_SBN_ENABLED');
+        /** @noinspection PhpUndefinedClassInspection */
+        Configuration::deleteByName('PAYIN7_SBN_SECURE_KEY');
 
         /** @noinspection PhpUndefinedClassInspection */
         Configuration::deleteByName('PAYIN7_OS_PENDING');
@@ -490,9 +503,14 @@ class Payin7 extends PaymentModule
             'PAYIN7_API_DEBUG_MODE' => Configuration::get('PAYIN7_API_DEBUG_MODE'),
             'PAYIN7_PAYMENT_MIN_ORDER_AMOUNT' => Configuration::get('PAYIN7_PAYMENT_MIN_ORDER_AMOUNT'),
             'PAYIN7_PAYMENT_MAX_ORDER_AMOUNT' => Configuration::get('PAYIN7_PAYMENT_MAX_ORDER_AMOUNT'),
+            'PAYIN7_SBN_ENABLED' => Configuration::get('PAYIN7_SBN_ENABLED'),
+            'PAYIN7_SBN_SECURE_KEY' => Configuration::get('PAYIN7_SBN_SECURE_KEY')
         );
     }
 
+    /**
+     * @return Payin7Logger
+     */
     public function getLogger()
     {
         return $this->logger;
@@ -523,6 +541,10 @@ class Payin7 extends PaymentModule
             Configuration::updateValue('PAYIN7_PAYMENT_MIN_ORDER_AMOUNT', Tools::getValue('PAYIN7_PAYMENT_MIN_ORDER_AMOUNT'));
             /** @noinspection PhpUndefinedClassInspection */
             Configuration::updateValue('PAYIN7_PAYMENT_MAX_ORDER_AMOUNT', Tools::getValue('PAYIN7_PAYMENT_MAX_ORDER_AMOUNT'));
+            /** @noinspection PhpUndefinedClassInspection */
+            Configuration::updateValue('PAYIN7_SBN_ENABLED', Tools::getValue('PAYIN7_SBN_ENABLED'));
+            /** @noinspection PhpUndefinedClassInspection */
+            Configuration::updateValue('PAYIN7_SBN_SECURE_KEY', Tools::getValue('PAYIN7_SBN_SECURE_KEY'));
         }
     }
 
@@ -633,6 +655,26 @@ class Payin7 extends PaymentModule
                     )
                 ),
                 array(
+                    'type' => 'select',
+                    'name' => 'PAYIN7_SBN_ENABLED',
+                    'is_bool' => true,
+                    'label' => $this->l('Store Background Notifications'),
+                    'options' => array(
+                        'query' => array(
+                            array(
+                                'sbn_enabled_id' => 1,
+                                'name' => $this->l('Enabled')
+                            ),
+                            array(
+                                'sbn_enabled_id' => 0,
+                                'name' => $this->l('Disabled')
+                            )
+                        ),
+                        'id' => 'sbn_enabled_id',
+                        'name' => 'name'
+                    )
+                ),
+                array(
                     'type' => 'text',
                     'label' => $this->l('Integration ID'),
                     'name' => 'PAYIN7_API_INTEGRATION_ID',
@@ -648,6 +690,12 @@ class Payin7 extends PaymentModule
                     'type' => 'text',
                     'label' => $this->l('Production API Key'),
                     'name' => 'PAYIN7_API_PRODUCTION_KEY',
+                    'col' => 4,
+                ),
+                array(
+                    'type' => 'text',
+                    'label' => $this->l('Store Background Notifications Secure Key'),
+                    'name' => 'PAYIN7_SBN_SECURE_KEY',
                     'col' => 4,
                 ),
                 array(
@@ -720,6 +768,12 @@ class Payin7 extends PaymentModule
         /** @noinspection PhpUndefinedClassInspection */
         /** @noinspection PhpUndefinedFieldInspection */
         $helper->fields_value['PAYIN7_PAYMENT_MAX_ORDER_AMOUNT'] = Configuration::get('PAYIN7_PAYMENT_MAX_ORDER_AMOUNT');
+        /** @noinspection PhpUndefinedClassInspection */
+        /** @noinspection PhpUndefinedFieldInspection */
+        $helper->fields_value['PAYIN7_SBN_ENABLED'] = Configuration::get('PAYIN7_SBN_ENABLED');
+        /** @noinspection PhpUndefinedClassInspection */
+        /** @noinspection PhpUndefinedFieldInspection */
+        $helper->fields_value['PAYIN7_SBN_SECURE_KEY'] = Configuration::get('PAYIN7_SBN_SECURE_KEY');
 
         /** @noinspection PhpUndefinedMethodInspection */
         return $helper->generateForm($this->fields_form);
@@ -770,11 +824,17 @@ class Payin7 extends PaymentModule
         }
     }
 
+    private $history_update_enabled = true;
+
+    public function setHistoryUpdateEnabled($enabled)
+    {
+        $this->history_update_enabled = $enabled;
+    }
+
     public function hookUpdateOrderStatus($params)
     {
         // save the changes and flush the history to payin7 - fast
-
-        if (isset($params['newOrderStatus']) && isset($params['id_order'])) {
+        if ($this->history_update_enabled && isset($params['newOrderStatus']) && isset($params['id_order'])) {
             $new_status = $params['newOrderStatus'];
             /** @noinspection PhpUndefinedClassInspection */
             $order = new Order($params['id_order']);
@@ -1374,6 +1434,20 @@ class Payin7 extends PaymentModule
         $cfg = Configuration::get('PAYIN7_API_VERSION');
         $cfg = $cfg ? $cfg : ($with_defaults ? self::CFG_DEFAULT_PAYIN7_API_VERSION : $cfg);
         return $cfg;
+    }
+
+    public function verifySbnPayload(array $data_payload, $signature)
+    {
+        /** @noinspection PhpUndefinedClassInspection */
+        $sbn_enabled = Configuration::get('PAYIN7_SBN_ENABLED');
+        /** @noinspection PhpUndefinedClassInspection */
+        $sbn_key = Configuration::get('PAYIN7_SBN_SECURE_KEY');
+
+        if (!$sbn_enabled || !$sbn_key || !$signature) {
+            return false;
+        }
+
+        return (sha1(implode('', $data_payload) . md5($sbn_key)) == $signature);
     }
 
     public function getConfigApiSandboxMode()

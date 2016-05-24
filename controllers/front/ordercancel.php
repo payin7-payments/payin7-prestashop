@@ -44,22 +44,16 @@ class Payin7OrderCancelModuleFrontController extends Payin7OrderRetModuleFrontCo
         /** @noinspection PhpUndefinedClassInspection */
         $orderm = new Order($order->getOrderId());
 
-        if (!ValidateCore::isLoadedObject($orderm)) {
-            $this->handleError($this->module->l('Order already processed'), self::RESP_INVALID_ORDER_ERR);
+        if (ValidateCore::isLoadedObject($orderm)) {
+            $state = $orderm->current_state;
+
+            if ($state == $this->module->getConfigIdOrderStatePending()) {
+                $orderm->setCurrentState($this->module->getConfigIdOrderStateCancelled());
+            }
+
+            /** @noinspection PhpUndefinedClassInspection */
+            $this->restoreOrderToCart(new Cart($orderm->id_cart));
         }
-
-        $state = $orderm->current_state;
-
-        if ($state != $this->module->getConfigIdOrderStatePending()) {
-            $this->handleError($this->module->l('Invalid order state'), self::RESP_INVALID_ORDER_STATE_ERR, true);
-        }
-
-        if ($state != $this->module->getConfigIdOrderStateCancelled()) {
-            $orderm->setCurrentState($this->module->getConfigIdOrderStateCancelled());
-        }
-
-        /** @noinspection PhpUndefinedClassInspection */
-        $this->restoreOrderToCart(new Cart($orderm->id_cart));
 
         Tools::redirect($this->getControllerOrderUrl());
     }

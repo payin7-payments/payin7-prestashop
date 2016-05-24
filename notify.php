@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="UTF-8" ?>
-<!--
+<?php
 /**
  * 2015-2016 Copyright (C) Payin7 S.L.
  *
@@ -24,14 +23,7 @@
  * @copyright 2015-2016 Payin7 S.L.
  * @license   http://opensource.org/licenses/GPL-3.0 GNU General Public License, version 3 (GPL-3.0)
  */
-!-->
-<module>
-    <name>payin7</name>
-    <displayName><![CDATA[Payin7]]></displayName>
-    <version><![CDATA[1.0.5]]></version>
-    <description><![CDATA[&iexcl;Financie sus sue&ntilde;os!]]></description>
-    <author><![CDATA[payin7]]></author>
-    <tab><![CDATA[payments_gateways]]></tab>
-    <is_configurable>1</is_configurable>
-    <need_instance>0</need_instance>
-</module>
+
+define('__INC__', true);
+include(__DIR__ . '/_ctrlexec.php');
+_execCompatController('Payin7Notify', 'notify');

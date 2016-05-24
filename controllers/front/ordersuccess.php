@@ -30,6 +30,8 @@ class Payin7OrderSuccessModuleFrontController extends Payin7OrderRetModuleFrontC
 {
     public function execute()
     {
+        $this->module->getLogger()->info(get_class($this) . ': ordersuccess :: ' . print_r($_POST, true));
+
         // check if POST
         $this->verifyIsPost();
 
@@ -50,11 +52,7 @@ class Payin7OrderSuccessModuleFrontController extends Payin7OrderRetModuleFrontC
 
             $state = $orderm->current_state;
 
-            if ($state != $this->module->getConfigIdOrderStatePending()) {
-                $this->handleError($this->module->l('Invalid order state'), self::RESP_INVALID_ORDER_STATE_ERR, true);
-            }
-
-            if ($state != $this->module->getConfigIdOrderStateAccepted()) {
+            if ($state == $this->module->getConfigIdOrderStatePending()) {
                 $orderm->setCurrentState($this->module->getConfigIdOrderStateAccepted());
             }
         }

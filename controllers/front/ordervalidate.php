@@ -35,6 +35,8 @@ class Payin7OrderValidateModuleFrontController extends Payin7BaseModuleFrontCont
             $this->handleError($this->module->l('Invalid Request'), self::RESP_REQUEST_ERR);
         }*/
 
+        $this->module->getLogger()->info(get_class($this) . ': ordervalidate :: ' . print_r((isset($_POST) && $_POST ? $_POST : $_GET), true));
+
         $payment_method = Tools::getValue('payment_method');
 
         if (!$payment_method) {

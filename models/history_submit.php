@@ -40,7 +40,7 @@ class HistorySubmitModel extends BaseModel
         $sql = 'SELECT * FROM `' . _DB_PREFIX_ . 'payin7_order_history`
         ORDER BY history_id ASC
         LIMIT ' . (int)self::MAX_CRON_ORDERS;
-        $history_data = Db::getInstance()->ExecuteS($sql);
+        $history_data = Db::getInstance()->executeS($sql);
 
         if (!$history_data) {
             return;

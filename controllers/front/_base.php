@@ -98,6 +98,8 @@ abstract class Payin7BaseModuleFrontController extends ModuleFrontController
 
     protected function handleError($message, $code, $force_redirect = false)
     {
+        $this->module->getLogger()->err(get_class($this) . ': ' . $message . ' (' . $code . ')');
+
         if (!$this->redirect_on_error && !$force_redirect) {
             throw new Exception($message, self::RESP_ERR_BASE + $code);
         } else {
