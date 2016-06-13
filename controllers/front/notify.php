@@ -59,14 +59,12 @@ class Payin7NotifyModuleFrontController extends ModuleFrontController
     {
         $this->module->getLogger()->info(get_class($this) . ': notify :: ' . print_r($_POST, true));
 
-        $payload = isset($_POST['payload']) ? (array)@json_decode($_POST['payload']) : array();
+        $payload = isset($_POST['payload_b64']) ? $_POST['payload_b64'] : null;
+        $payload = $payload ? @base64_decode($payload) : null;
+        $payload = $payload ? (array)@json_decode($payload) : null;
+
         $signature = isset($_POST['signature']) ? $_POST['signature'] : null;
         $call_type = isset($_POST['call_type']) ? $_POST['call_type'] : null;
-
-        /*$secure_key = 'sbn_secure_key';
-        $call_type = 'ping';
-        $payload = array();
-        $signature = sha1(implode('', $payload) . md5($secure_key));*/
 
         // check the request
         if (!$this->debug) {
@@ -237,7 +235,13 @@ class Payin7NotifyModuleFrontController extends ModuleFrontController
             header('HTTP/1.1 500 Internal Server Error');
         }
 
-        echo ($success ? 'OK' : 'KO') . "\n" . (int)$code . ($message ? "\n" . $message : null);
+        echo ($success ? 'OK' : 'KO') . "\n" .
+            (int)$code . "\n" .
+            $message . "\n" .
+            json_encode(array_filter(array(
+                (isset($_POST) ? $_POST : null),
+                (isset($_GET) ? $_GET : null),
+            )));
         exit(0);
     }
 }
