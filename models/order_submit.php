@@ -106,6 +106,7 @@ class OrderSubmitModel extends BaseModel
             'status' => $this->_order->getStatus(),
             'is_gift' => ($this->_order->getGiftMessageId() != null),
             'ref_quote_id' => $this->_order->getQuoteId(),
+            'cart_secure_key' => $this->_order->getCartSecureKey(),
             'order_subtotal_with_tax' => $this->_order->getSubtotalInclTax(),
             'order_subtotal' => $this->_order->getSubtotal(),
             'order_tax' => $this->_order->getTaxAmount(),
@@ -254,19 +255,67 @@ class OrderSubmitModel extends BaseModel
         return ($this->_order ? $this->_order->getPayin7OrderSent() : null);
     }
 
+    public function updateOrder()
+    {
+        if (!$this->_order) {
+            return false;
+        }
+
+        $this->module->getLogger()->info('Will submit order update to Payin7, ID: ' . $this->_order->getOrderId());
+
+        // begin submitting
+
+        $data = array(
+            'order_id' => $this->_order->getOrderId(),
+            'unique_order_id' => $this->_order->getPayin7OrderIdentifier(),
+            'payment_method' => $this->_order->getPaymentMethodCode(),
+            'device_type' => $this->_device_type,
+            'ordered_by_ip_address' => $this->_ordered_by_ip_address,
+            'source' => $this->_source,
+            'order' => json_encode($this->_prepareOrderData()),
+            'items' => json_encode($this->_prepareOrderItems()),
+            'addresses' => json_encode($this->_prepareOrderAddresses()),
+            'customer' => json_encode($this->_prepareCustomerData()),
+            'sysinfo' => json_encode($this->_sysinfo)
+        );
+
+        $this->module->getLogger()->info('Submitting order update to Payin7: ' . print_r(array(
+                'order_id' => $this->_order->getOrderId(),
+                'payment_method' => $this->_order->getPaymentMethodCode()
+            ), true));
+
+        $client = $this->module->getApiClientInstance();
+        $response = $client->updateOrder($data);
+
+        if (!$response['payin7_order_id']) {
+            return false;
+        }
+
+        // update the order
+        $this->_order->setPayin7OrderIdentifier($response['payin7_order_id']);
+        $this->_order->setPayin7OrderSent(true);
+        $this->_order->setPayin7OrderAccepted((bool)$response['is_accepted']);
+        $this->_order->setPayin7AccessToken($response['access_token']);
+
+        $this->module->getLogger()->info('Order update to Payin7, ID: ' .
+            $this->_order->getOrderId() . ', data: ' . print_r($response, true));
+
+        return $this;
+    }
+
     public function submitOrder($force = false)
     {
         if (!$this->_order) {
             return false;
         }
 
-        $this->module->getLogger()->info('Will submit payment to Payin7, ID: ' . $this->_order->getOrderId());
+        $this->module->getLogger()->info('Will submit order to Payin7, ID: ' . $this->_order->getOrderId());
 
         $already_sent = $this->getPayin7IsOrderSent();
 
         // check if already submitted
         if ($already_sent && !$force) {
-            $this->module->getLogger()->debug('Payment already submitted - not doing anything');
+            $this->module->getLogger()->debug('Order already submitted - not doing anything');
             return $this->getPayin7OrderIdentifier();
         }
 
@@ -274,6 +323,7 @@ class OrderSubmitModel extends BaseModel
 
         $data = array(
             'order_id' => $this->_order->getOrderId(),
+            'unique_order_id' => $this->_order->getPayin7OrderIdentifier(),
             'payment_method' => $this->_order->getPaymentMethodCode(),
             'device_type' => $this->_device_type,
             'ordered_by_ip_address' => $this->_ordered_by_ip_address,
@@ -303,7 +353,7 @@ class OrderSubmitModel extends BaseModel
         $this->_order->setPayin7OrderAccepted((bool)$response['is_accepted']);
         $this->_order->setPayin7AccessToken($response['access_token']);
 
-        $this->module->getLogger()->info('Payment ' . ($already_sent ? 're' : null) . 'submitted to Payin7, ID: ' .
+        $this->module->getLogger()->info('Order ' . ($already_sent ? 're' : null) . 'submitted to Payin7, ID: ' .
             $this->_order->getOrderId() . ', data: ' . print_r($response, true));
 
         return $this;

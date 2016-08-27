@@ -150,4 +150,9 @@ class ApiClient
     {
         return $this->_callApi(__FUNCTION__, $data);
     }
+
+    public function updateOrder(array $data)
+    {
+        return $this->_callApi(__FUNCTION__, $data);
+    }
 }

@@ -24,6 +24,7 @@
  * @license   http://opensource.org/licenses/GPL-3.0 GNU General Public License, version 3 (GPL-3.0)
  */
 
+/** @noinspection PhpIncludeInspection */
 require_once(__DIR__ . DS . '_orderret.php');
 
 class Payin7OrderSuccessModuleFrontController extends Payin7OrderRetModuleFrontController
@@ -35,30 +36,9 @@ class Payin7OrderSuccessModuleFrontController extends Payin7OrderRetModuleFrontC
         // check if POST
         $this->verifyIsPost();
 
-        $order = $this->getVerifyOrder();
+        $this->clearCart();
 
-        // update the order state
-        if (!$order->getPayin7OrderAccepted()) {
-            $order->setPayin7OrderAccepted(true);
-            $order->savePayin7Data();
-        }
-
-        if ($this->_is_verified &&
-            $this->_is_paid
-        ) {
-            /** @var OrderCore $orderm */
-            /** @noinspection PhpUndefinedClassInspection */
-            $orderm = new Order($order->getOrderId());
-
-            $state = $orderm->current_state;
-
-            if ($state == $this->module->getConfigIdOrderStatePending()) {
-                $orderm->setCurrentState($this->module->getConfigIdOrderStateAccepted());
-            }
-        }
-
-        $this->context->smarty->assign(array_merge($this->module->getPayin7SDKTemplateParams(), array(
-            'order_identifier' => json_encode($order->getPayin7OrderIdentifier())
+        $this->context->smarty->assign(array_merge($this->module->getPayin7SDKTemplateParams(), array(/*'order_identifier' => json_encode($order->getPayin7OrderIdentifier())*/
         )));
 
         if ($this->module->getIsPrestashop14()) {

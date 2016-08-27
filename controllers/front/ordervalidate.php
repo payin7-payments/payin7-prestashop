@@ -24,17 +24,13 @@
  * @license   http://opensource.org/licenses/GPL-3.0 GNU General Public License, version 3 (GPL-3.0)
  */
 
+/** @noinspection PhpIncludeInspection */
 require_once(__DIR__ . DS . '_base.php');
 
 class Payin7OrderValidateModuleFrontController extends Payin7BaseModuleFrontController
 {
     public function execute()
     {
-        // this can be called both by GET / POST
-        /*if (!isset($_POST)) {
-            $this->handleError($this->module->l('Invalid Request'), self::RESP_REQUEST_ERR);
-        }*/
-
         $this->module->getLogger()->info(get_class($this) . ': ordervalidate :: ' . print_r((isset($_POST) && $_POST ? $_POST : $_GET), true));
 
         $payment_method = Tools::getValue('payment_method');
@@ -63,92 +59,54 @@ class Payin7OrderValidateModuleFrontController extends Payin7BaseModuleFrontCont
 
         $order_model->setPaymentMethodCode($payment_method);
         $order_model->setPayin7SandboxOrder($this->module->getConfigApiSandboxMode());
+        $order_model->setCartSecureKey($cart->secure_key);
 
-        Db::getInstance()->execute('BEGIN');
+        $order_submitted = $this->module->submitOrder($order_model);
 
-        try {
-            // validate and store the order
-            /** @noinspection PhpUndefinedMethodInspection */
-            /** @noinspection PhpUndefinedFieldInspection */
-            $this->module->validateOrder(
-                $cart->id,
-                $this->module->getConfigIdOrderStatePending(),
-                $cart->getOrderTotal(),
-                $this->module->displayName,
-                null,
-                array(),
-                (int)Context::getContext()->currency->id,
-                false,
-                $this->context->cart->secure_key
-            );
-
-            /** @noinspection PhpUndefinedFieldInspection */
-            $order_id = $this->module->currentOrder;
-
-            if (!$order_id) {
-                Db::getInstance()->execute('ROLLBACK');
-                $this->handleError($this->module->l('Invalid params'), self::RESP_REQUEST_ERR);
-            }
-
-            $order_model->setOrderId($order_id);
-
-            $this->handleCommOrder($order_model);
-
-            Db::getInstance()->execute('COMMIT');
-        } catch (Exception $e) {
-            Db::getInstance()->execute('ROLLBACK');
-            throw $e;
+        if (!$order_submitted) {
+            $this->handleError($this->module->l('Order could not be submitted'), self::RESP_ORDER_SUBMIT_ERR);
+            return;
         }
 
-        /** @noinspection PhpUndefinedMethodInspection */
-        $redir_url = $this->module->getModuleLink('orderfinalize',
-            array('order_id' => $order_model->getPayin7OrderIdentifier()),
-            $this->module->getShouldUseSecureConnection());
-
-        if ($this->module->getIsPrestashop14()) {
-            header('Location: ' . $redir_url);
-            exit();
-        } else {
-            Tools::redirect($redir_url);
-        }
+        $this->finalizeOrder($order_model);
     }
 
-    protected function handleCommOrder(\Payin7\Models\OrderModel $order_model)
+    protected function finalizeOrder(\Payin7\Models\OrderModel $order)
     {
-        // not submitted - submit it to Payin7
+        $this->module->getLogger()->info(get_class($this) . ': orderfinalize :: ' . print_r($_POST, true));
 
-        $source = 'frontend';
-        $ordered_by_ip_address = \Payin7\Tools\StringUtils::getIpAddress();
-        $locale = $this->module->getCurrentLocaleCode();
+        /** @noinspection PhpUndefinedMethodInspection */
+        $order_data = array(
+            'orderId' => $order->getPayin7OrderIdentifier(),
+            'orderUrl' => $this->module->getFrontendOrderCompleteUrl($order,
+                false,
+                $this->module->getShouldUseSecureConnection(),
+                true),
+            'cancelUrl' => $this->module->getModuleLink('ordercancel',
+                array(
+                    'module_action' => 'cancel'
+                ),
+                $this->module->getShouldUseSecureConnection(),
+                'ordercancel_handler'),
+            'completeUrl' => $this->module->getModuleLink('ordersuccess',
+                array(
+                    'module_action' => 'complete'
+                ),
+                $this->module->getShouldUseSecureConnection(),
+                'ordersuccess_handler'),
+            'isCheckout' => true
+        );
 
-        /** @var \Payin7\Models\OrderSubmitModel $order_submit */
-        $order_submit = $this->module->getModelInstance('order_submit');
-        $order_submit->setSysinfo($this->module->getSysinfo());
-        $order_submit->setOrderedByIpAddress($ordered_by_ip_address);
-        $order_submit->setSource($source);
-        $order_submit->setOrder($order_model);
-        $order_submit->setLanguageCode($locale);
+        $this->context->smarty->assign(array_merge($this->module->getPayin7SDKTemplateParams(), array(
+            'order_data' => json_encode($order_data),
+        )));
 
-        try {
-            $submit_status = $order_submit->submitOrder(true);
-
-            if (!$submit_status) {
-                Db::getInstance()->execute('ROLLBACK');
-                $this->handleError($this->module->l('Order could not be submitted'), self::RESP_ORDER_SUBMIT_ERR);
-            }
-
-            // save any order changes introduced by the submitter
-            $order_model->savePayin7Data();
-
-        } catch (\Payin7Payments\Exception\ClientErrorResponseException $e) {
-            Db::getInstance()->execute('ROLLBACK');
-            $this->handleError($e->getFullServerErrorMessage(), self::RESP_ORDER_SUBMIT_ERR);
-        } catch (Exception $e) {
-            if ($this->debug) {
-                throw $e;
-            }
-            Db::getInstance()->execute('ROLLBACK');
-            $this->handleError('System Error', self::RESP_SYSTEM_ERR);
+        if ($this->module->getIsPrestashop14()) {
+            $this->context->smarty->display(_PS_MODULE_DIR_ . 'payin7/views/templates/front/finalize.tpl');
+        } else {
+            return $this->setTemplate('finalize.tpl');
         }
+
+        return null;
     }
 }

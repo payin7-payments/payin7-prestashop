@@ -30,15 +30,15 @@
             <a class="pay" href="{$payment_method.url}"
                title="{$payment_method.title|escape:'html':'UTF-8'}">
                 {if $payment_method.is_unavailable}<span style="font-weight:bold; color:red;">UNAVAILABLE,
-                    reason: {$payment_method.unavailability_reason|escape:'html':'UTF-8'}</span>{/if}
+                    reason: {$payment_method.unavailability_reason}</span>{/if}
 
                 {if $payment_method.remote_config.logo}
                     <img class="method-logo" src="{$payment_method.remote_config.logo|escape:'html':'UTF-8'}"
                          alt="{$payment_method.title|escape:'html':'UTF-8'}"/>
                 {/if}
-                {$payment_method.title|escape:'html':'UTF-8'}
+                {$payment_method.title}
                 {if $payment_method.remote_config.checkout_content}
-                    <span>{$payment_method.remote_config.checkout_content|escape:'html':'UTF-8'}</span>
+                    <span>{$payment_method.remote_config.checkout_content}</span>
                 {/if}
             </a>
             {if $payment_method.remote_config.more_info_content}
@@ -59,7 +59,7 @@
                    data-code="{$payment_method.code|escape:'html':'UTF-8'}">
 
                     <a class="pay" href="{$payment_method.url}"
-                       title="{$payment_method.title|escape:'html':'UTF-8'}">
+                       title="{$payment_method.title}">
                         {if $payment_method.is_unavailable}<span style="font-weight:bold; color:red;">UNAVAILABLE,
                             reason: {$payment_method.unavailability_reason|escape:'html':'UTF-8'}</span>{/if}
 
@@ -70,7 +70,7 @@
                         {/if}
                         {$payment_method.title|escape:'html':'UTF-8'}
                         {if $payment_method.remote_config.checkout_content}
-                            <span>{$payment_method.remote_config.checkout_content|escape:'html':'UTF-8'}</span>
+                            <span>{$payment_method.remote_config.checkout_content}</span>
                         {/if}
                     </a>
                     {if $payment_method.remote_config.more_info_content}

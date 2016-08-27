@@ -37,7 +37,8 @@ if (!defined('_PS_VERSION_'))
  */
 class Payin7 extends PaymentModule
 {
-    const PLUGIN_VERSION = '1.0.5';
+    const MODULE_NAME = 'payin7';
+    const PLUGIN_VERSION = '1.0.6';
     const MIN_PHP_VER = '5.3.3';
 
     const SETTINGS_FORM_NAME = 'submitPayin7Settings';
@@ -49,6 +50,8 @@ class Payin7 extends PaymentModule
     const CFG_DEFAULT_PAYIN7_SBN_ENABLED = true;
 
     const QUICK_HISTORY_SEND_TIMEOUT = 10;
+
+    const LAST_ORDER_ID_SESS_KEY = 'payin7_last_order_id';
 
     const PM_UNAV_PLATFORM_UNAVAILABLE = 10;
     const PM_UNAV_CURRENCY_UNSUPPORTED = 11;
@@ -64,6 +67,9 @@ class Payin7 extends PaymentModule
     const SERVICE_FRONTEND = 3;
     const SERVICE_RES = 4;
     const SERVICE_JSAPI = 5;
+
+    const SOURCE_NOTIFY = 'notify';
+    const SOURCE_FRONTEND = 'frontend';
 
     const PAYIN7_ORDER_STATE_ACCEPTED = 'accepted';
     const PAYIN7_ORDER_STATE_REJECTED = 'rejected';
@@ -94,6 +100,8 @@ class Payin7 extends PaymentModule
     private $_is15;
     protected $_output;
 
+    protected $_use_custom_urls = false;
+
     protected $_path;
     protected $local_path;
 
@@ -103,9 +111,81 @@ class Payin7 extends PaymentModule
     /** @var array|null */
     protected $fields_form;
 
+    private $_module_routes = array(
+        'orderfinalize_handler' => array(
+            'controller' => 'orderfinalize',
+            'rule' => 'payin7_orderfinalize/{order_id}',
+            'keywords' => array(
+                'order_id' => array('regexp' => '[_a-zA-Z0-9_-]+', 'param' => 'order_id'),
+            ),
+            'params' => array(
+                'fc' => 'module',
+                'module' => self::MODULE_NAME
+            )
+        ),
+        'ordervalidate_handler' => array(
+            'controller' => 'ordervalidate',
+            'rule' => 'payin7_ordervalidate/{payment_method}',
+            'keywords' => array(
+                'payment_method' => array('regexp' => '[_a-zA-Z0-9_-]+', 'param' => 'payment_method'),
+            ),
+            'params' => array(
+                'fc' => 'module',
+                'module' => self::MODULE_NAME
+            )
+        ),
+        'ordervalidate_handler2' => array(
+            'controller' => 'ordervalidate',
+            'rule' => 'payin7_ordervalidate',
+            'keywords' => array(),
+            'params' => array(
+                'fc' => 'module',
+                'module' => self::MODULE_NAME
+            )
+        ),
+        'ordercancel2_handler' => array(
+            'controller' => 'ordercancel',
+            'rule' => 'payin7_ordercancel/{order_id}',
+            'keywords' => array(
+                'order_id' => array('regexp' => '[_a-zA-Z0-9_-]+', 'param' => 'order_id'),
+            ),
+            'params' => array(
+                'fc' => 'module',
+                'module' => self::MODULE_NAME
+            )
+        ),
+        'ordercancel_handler' => array(
+            'controller' => 'ordercancel',
+            'rule' => 'payin7_ordercancel',
+            'keywords' => array(),
+            'params' => array(
+                'fc' => 'module',
+                'module' => self::MODULE_NAME
+            )
+        ),
+        'ordersuccess_handler' => array(
+            'controller' => 'ordersuccess',
+            'rule' => 'payin7_ordersuccess',
+            'keywords' => array(),
+            'params' => array(
+                'fc' => 'module',
+                'module' => self::MODULE_NAME
+            )
+        ),
+        'notify_handler' => array(
+            'controller' => 'notify',
+            'rule' => 'payin7_notify',
+            'keywords' => array(),
+            'params' => array(
+                'fc' => 'module',
+                'module' => self::MODULE_NAME
+            )
+        ),
+    );
+
     public function __construct()
     {
-        $this->name = 'payin7';
+        $this->name = self::MODULE_NAME;
         $this->tab = 'payments_gateways';
         $this->version = self::PLUGIN_VERSION;
         $this->author = 'payin7';
@@ -142,7 +222,7 @@ class Payin7 extends PaymentModule
         require_once(__DIR__ . DS . 'classes' . DS . 'logger' . DS . 'Payin7Logger.php');
 
         $this->logger = Payin7Logger::getInstance()
-            ->setFilename(dirname(__FILE__) . '/../../log/payin7.log')
+            ->setFilename($this->getLogFilename())
             ->setDebugEnabled($this->getConfigApiDebugMode());
 
         // models
@@ -158,6 +238,11 @@ class Payin7 extends PaymentModule
         require_once(__DIR__ . DS . 'classes' . DS . 'tools' . DS . 'string_utils.php');
         /** @noinspection PhpIncludeInspection */
         require_once(__DIR__ . DS . 'classes' . DS . 'tools' . DS . 'unicode.php');
+    }
+
+    protected function getLogFilename()
+    {
+        return _PS_ROOT_DIR_ . DS . 'log' . DS . 'payin7.log';
     }
 
     protected function getPaymentMethods()
@@ -217,7 +302,8 @@ class Payin7 extends PaymentModule
         if ($this->_is15up) {
             /** @noinspection PhpUndefinedMethodInspection */
             $ret = $this->registerHook('displayPaymentEU') &&
-                $this->registerHook('actionAdminControllerSetMedia');
+                $this->registerHook('actionAdminControllerSetMedia') &&
+                $this->registerHook('moduleRoutes');
         }
 
         /** @noinspection PhpUndefinedMethodInspection */
@@ -263,9 +349,9 @@ class Payin7 extends PaymentModule
             // PAYIN7_OS_PENDING
             /** @noinspection PhpUndefinedClassInspection */
             $OrderState = new OrderState();
-            $OrderState->name = array_fill(0, 10, 'Awaiting Payin7 acceptance');
+            $OrderState->name = array_fill(0, 10, 'ACEPTACION PAGO PAYIN7 EN ESPERA');
             $OrderState->send_email = 0;
-            $OrderState->module_name = 'payin7';
+            $OrderState->module_name = self::MODULE_NAME;
             $OrderState->invoice = 0;
             $OrderState->logable = 0;
             $OrderState->color = '#2A5E8E';
@@ -283,9 +369,10 @@ class Payin7 extends PaymentModule
             // PAYIN7_OS_ACCEPTED
             /** @noinspection PhpUndefinedClassInspection */
             $OrderState = new OrderState();
-            $OrderState->name = array_fill(0, 10, 'Payin7 accepted');
+            $OrderState->name = array_fill(0, 10, 'PAGO PAYIN7 ACEPTADO');
             $OrderState->send_email = 0;
-            $OrderState->module_name = 'payin7';
+            $OrderState->module_name = self::MODULE_NAME;
+            //$OrderState->template = 'payment';
             $OrderState->invoice = 0;
             $OrderState->logable = 0;
             $OrderState->color = '#32CD32';
@@ -303,9 +390,10 @@ class Payin7 extends PaymentModule
             // PAYIN7_OS_CANCELLED
             /** @noinspection PhpUndefinedClassInspection */
             $OrderState = new OrderState();
-            $OrderState->name = array_fill(0, 10, 'Payin7 canceled');
+            $OrderState->name = array_fill(0, 10, 'PAGO PAYIN7 CANCELADO');
             $OrderState->send_email = 0;
-            $OrderState->module_name = 'payin7';
+            $OrderState->module_name = self::MODULE_NAME;
+            //$OrderState->template = 'order_canceled';
             $OrderState->invoice = 0;
             $OrderState->logable = 0;
             $OrderState->color = '#DC143C';
@@ -405,11 +493,11 @@ class Payin7 extends PaymentModule
 
         // remove payin7 order states
         $sql = 'DELETE FROM `' . _DB_PREFIX_ . 'order_state_lang` WHERE id_order_state IN (
-        SELECT a.id_order_state FROM `' . _DB_PREFIX_ . 'order_state` a WHERE a.module_name = \'payin7\')';
+        SELECT a.id_order_state FROM `' . _DB_PREFIX_ . 'order_state` a WHERE a.module_name = \'' . self::MODULE_NAME . '\')';
         /** @noinspection PhpUndefinedClassInspection */
         Db::getInstance()->execute($sql);
 
-        $sql = 'DELETE FROM `' . _DB_PREFIX_ . 'order_state` WHERE module_name = \'payin7\'';
+        $sql = 'DELETE FROM `' . _DB_PREFIX_ . 'order_state` WHERE module_name = \'' . self::MODULE_NAME . '\'';
         /** @noinspection PhpUndefinedClassInspection */
         Db::getInstance()->execute($sql);
     }
@@ -817,7 +905,7 @@ class Payin7 extends PaymentModule
     public function hookNewOrder($params)
     {
         // prevent sending an email to the customer upon checking out with Payin7
-        // as the order is actually NOT complete yet (but prestashop believes it is too smart!)
+        // as the order is actually NOT complete yet
         if (isset($params['customer'])) {
             $customer = $params['customer'];
             $customer->email = null;
@@ -1043,18 +1131,43 @@ class Payin7 extends PaymentModule
             (defined('_PS_PRICE_COMPUTE_PRECISION_') ? _PS_PRICE_COMPUTE_PRECISION_ : 1));
     }
 
+    public function submitOrder(\Payin7\Models\OrderModel $order_model, $source = null, $update = false)
+    {
+        $this->getLogger()->info(get_class($this) . ': submitorder :: ' . $order_model);
+
+        $source = $source ?: Payin7::SOURCE_FRONTEND;
+
+        $ordered_by_ip_address = \Payin7\Tools\StringUtils::getIpAddress();
+        $locale = $this->getCurrentLocaleCode();
+
+        /** @var \Payin7\Models\OrderSubmitModel $order_submit */
+        $order_submit = $this->getModelInstance('order_submit');
+        $order_submit->setSysinfo($this->getSysinfo());
+        $order_submit->setOrderedByIpAddress($ordered_by_ip_address);
+        $order_submit->setSource($source);
+        $order_submit->setOrder($order_model);
+        $order_submit->setLanguageCode($locale);
+
+        return ($update ? $order_submit->updateOrder() : $order_submit->submitOrder(true));
+    }
+
     /**
      * @param \Payin7\Models\QuoteModel $quote
+     * @param null $cart
      * @param bool $full_data
-     * @return \Payin7\Models\OrderModel
-     * @throws Exception
+     * @return \Payin7\Models\QuoteModel
      */
-    public function prepareCartQuote(\Payin7\Models\QuoteModel $quote = null, $full_data = false)
+    public function prepareCartQuote(\Payin7\Models\QuoteModel $quote = null, $full_data = false, $cart = null)
     {
         /** @var \Payin7\Models\QuoteModel $quote */
         $quote = $quote ? $quote : $this->getModelInstance('quote');
 
-        $cart = $this->context->cart;
+        $cart = $cart ? $cart : $this->context->cart;
+
+        if (!$cart) {
+            return null;
+        }
+
         /** @noinspection PhpUndefinedMethodInspection */
         $products = $cart->getProducts();
         /** @noinspection PhpUndefinedClassInspection */
@@ -1246,7 +1359,38 @@ class Payin7 extends PaymentModule
         return $quote;
     }
 
-    public function getModuleLink($controller, array $params = null, $is_secure = null)
+    protected function getBaseLink($id_shop = null, $ssl = null, $relative_protocol = false)
+    {
+        static $force_ssl = null;
+
+        if ($ssl === null) {
+            if ($force_ssl === null) {
+                /** @noinspection PhpUndefinedClassInspection */
+                $force_ssl = (Configuration::get('PS_SSL_ENABLED') && Configuration::get('PS_SSL_ENABLED_EVERYWHERE'));
+            }
+            $ssl = $force_ssl;
+        }
+
+        /** @noinspection PhpUndefinedClassInspection */
+        if (Configuration::get('PS_MULTISHOP_FEATURE_ACTIVE') && $id_shop !== null) {
+            $shop = new Shop($id_shop);
+        } else {
+            $shop = Context::getContext()->shop;
+        }
+
+        if ($relative_protocol) {
+            /** @noinspection PhpUndefinedFieldInspection */
+            $base = '//' . ($ssl ? $shop->domain_ssl : $shop->domain);
+        } else {
+            /** @noinspection PhpUndefinedFieldInspection */
+            $base = ($ssl ? 'https://' . $shop->domain_ssl : 'http://' . $shop->domain);
+        }
+
+        /** @noinspection PhpUndefinedMethodInspection */
+        return $base . $shop->getBaseURI();
+    }
+
+    public function getModuleLink($controller, array $params = null, $is_secure = null, $custom_route_handle = null)
     {
         $url = null;
         if ($this->_is14) {
@@ -1254,10 +1398,29 @@ class Payin7 extends PaymentModule
                 $this->name . '/' . $controller . '.php';
             $url .= ($params ? '?' . http_build_query($params, '', '&') : null);
         } else {
+            if ($this->_is15up) {
+                if ($this->_use_custom_urls && $custom_route_handle) {
+                    // append a custom prefix for custom routes matching
+                    /** @noinspection PhpUndefinedClassInspection */
+                    $dispatcher = Dispatcher::getInstance();
+                    /** @noinspection PhpUndefinedFieldInspection */
+                    $id_lang = Context::getContext()->language->id;
+                    /** @noinspection PhpUndefinedMethodInspection */
+                    $url = $this->getBaseLink(null, $is_secure, false) .
+                        $dispatcher->createUrl($custom_route_handle, $id_lang, $params);
+                    return $url;
+                }
+            }
+
             /** @noinspection PhpUndefinedMethodInspection */
             $url = $this->context->link->getModuleLink($this->name, $controller, $params, $is_secure);
         }
         return $url;
+    }
+
+    public function hookModuleRoutes()
+    {
+        return $this->_module_routes;
     }
 
     public function hookPayment()
@@ -1300,8 +1463,15 @@ class Payin7 extends PaymentModule
                 $payment_methods[$method]['url'] = $this->getModuleLink(
                     'ordervalidate',
                     array('payment_method' => $method),
-                    $this->getShouldUseSecureConnection()
+                    $this->getShouldUseSecureConnection(),
+                    'ordervalidate_handler'
                 );
+
+                if (isset($payment_methods[$method]['remote_config']['title']) &&
+                    $payment_methods[$method]['remote_config']['title']
+                ) {
+                    $payment_methods[$method]['title'] = $payment_methods[$method]['remote_config']['title'];
+                }
 
                 $payment_method_public_cfg[$method]['code'] = $method;
                 $payment_method_public_cfg[$method]['logo'] = isset($payment_methods[$method]['remote_config']['logo']) ?
@@ -1319,7 +1489,8 @@ class Payin7 extends PaymentModule
                 'checkout_options' => json_encode(array(
                     'paymentMethodsCfg' => $payment_method_public_cfg,
                     'submitFormAction' => $this->getModuleLink('ordervalidate', array(),
-                        $this->getShouldUseSecureConnection())
+                        $this->getShouldUseSecureConnection(),
+                        'ordervalidate_handler2')
                 )),
                 'is16up' => version_compare(_PS_VERSION_, "1.6", ">=")
             )));

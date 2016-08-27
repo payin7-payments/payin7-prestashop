@@ -26,6 +26,9 @@
  */
 class Payin7NotifyModuleFrontController extends ModuleFrontController
 {
+    const API_VER_HEADER = 'X-Notify-Api-Ver';
+    const API_VER = 2;
+
     const RESP_ERR_BASE = 2000;
     const RESP_GENERIC_ERR = 40;
     const RESP_REQUEST_ERR = 50;
@@ -61,7 +64,7 @@ class Payin7NotifyModuleFrontController extends ModuleFrontController
 
         $payload = isset($_POST['payload_b64']) ? $_POST['payload_b64'] : null;
         $payload = $payload ? @base64_decode($payload) : null;
-        $payload = $payload ? (array)@json_decode($payload) : null;
+        $payload = $payload ? (array)@json_decode($payload) : array();
 
         $signature = isset($_POST['signature']) ? $_POST['signature'] : null;
         $call_type = isset($_POST['call_type']) ? $_POST['call_type'] : null;
@@ -69,18 +72,18 @@ class Payin7NotifyModuleFrontController extends ModuleFrontController
         // check the request
         if (!$this->debug) {
             if (!isset($_POST) || !$_POST) {
-                $this->handleError($this->module->l('Invalid Request'), self::RESP_REQUEST_ERR);
+                $this->handleError($this->module->l('Invalid Request 1'), self::RESP_REQUEST_ERR);
             }
         }
 
         // check the request
         if (!is_array($payload) || !$signature || !$call_type) {
-            $this->handleError($this->module->l('Invalid Request'), self::RESP_REQUEST_ERR);
+            $this->handleError($this->module->l('Invalid Request 2'), self::RESP_REQUEST_ERR);
         }
 
         // verify the payload
         if (!$this->module->verifySbnPayload($payload, $signature)) {
-            $this->handleError($this->module->l('Invalid Request'), self::RESP_VERIFY_PAYLOAD_ERR);
+            $this->handleError($this->module->l('Payload could not be validated'), self::RESP_VERIFY_PAYLOAD_ERR);
         }
 
         // check the call type
@@ -91,9 +94,10 @@ class Payin7NotifyModuleFrontController extends ModuleFrontController
         // process
         $message = null;
         $code = null;
+        $data = null;
 
         try {
-            $success = $this->processPayload($call_type, $payload, $message, $code);
+            $success = $this->processPayload($call_type, $payload, $message, $code, $data);
         } catch (Exception $e) {
             $success = false;
             $msg = $e->getMessage() . ' - ' . $e->getTraceAsString() . ' - ' . $e->getFile() . ' - ' . $e->getLine();
@@ -102,38 +106,120 @@ class Payin7NotifyModuleFrontController extends ModuleFrontController
             $this->handleError($msg, self::RESP_GENERIC_ERR);
         }
 
-        $this->handleResponse($message, $code, $success);
+        $this->handleResponse($message, $code, $success, $data);
     }
 
-    protected function processPayload($call_type, array $payload, & $message, & $code)
+    protected function processPayload($call_type, array $payload, & $message, & $code, array & $data = null)
     {
         $message = null;
+        $data = null;
         $code = null;
         $ret = true;
 
         switch ($call_type) {
-            case self::CALL_TYPE_ORDER_STATE_CHANGE : {
+            case self::CALL_TYPE_ORDER_STATE_CHANGE: {
 
                 $new_order_state = isset($payload['state']) ? $payload['state'] : null;
+                $create_if_missing = isset($payload['create_order']) ? $payload['create_order'] : null;
                 $order_id = isset($payload['order_id']) ? $payload['order_id'] : null;
+                $payment_method = isset($payload['payment_method']) ? $payload['payment_method'] : null;
+                $is_sandbox = isset($payload['is_sandbox']) ? $payload['is_sandbox'] : false;
+                $store_order_id = isset($payload['store_order_id']) ? $payload['store_order_id'] : null;
 
-                if ($order_id) {
-                    /** @var \Payin7\Models\OrderModel $order */
-                    $order = $this->module->getModelInstance('order');
-                    $loaded = $order->loadPayin7Data($order_id);
+                if (!$order_id) {
+                    $message = 'Invalid order id';
+                    $ret = false;
+                }
 
-                    if ($loaded) {
-                        return $this->processOrderStateChange($new_order_state, $payload, $order, $message, $code);
-                    } else {
-                        $message = 'Local order could not be loaded';
+                $order = null;
+
+                if ($ret && $create_if_missing) {
+                    if (!$store_order_id) {
+                        // no store order id passed - order may not exist yet
+                        $cart_id = isset($payload['store_cart_id']) ? $payload['store_cart_id'] : null;
+                        $cart_secure_key = isset($payload['store_cart_secure_key']) ? $payload['store_cart_secure_key'] : null;
+
+                        if (!$cart_id || !$cart_secure_key) {
+                            $message = 'Cart id / skey / pdata not passed';
+                            $ret = false;
+                        } else {
+                            /** @var CartCore $cart */
+                            /** @noinspection PhpUndefinedClassInspection */
+                            $cart = new Cart((int)$cart_id);
+
+                            /** @noinspection PhpUndefinedClassInspection */
+                            if ($cart && Validate::isLoadedObject($cart) && $cart->id) {
+                                if ($cart->secure_key != $cart_secure_key) {
+                                    $message = 'Cart secure key does not match';
+                                    $ret = false;
+                                } else {
+                                    // check if order already exists
+                                    /** @noinspection PhpUndefinedClassInspection */
+                                    $order_p = Order::getOrderByCartId((int)($cart->id));
+
+                                    /** @noinspection PhpUndefinedClassInspection */
+                                    if (!$order_p || !Validate::isLoadedObject($order_p)) {
+                                        try {
+                                            $order = $this->createOrderFromCart($cart,
+                                                $order_id,
+                                                $payment_method,
+                                                $is_sandbox,
+                                                $message, $code);
+                                        } catch (Exception $e) {
+                                            throw new Exception('Could not create order from cart: ' . $e->getMessage(), $e->getCode(), $e->getPrevious());
+                                        }
+                                    }
+                                }
+                            } else {
+                                $message = 'Cart item not found';
+                                $ret = false;
+                            }
+                        }
                     }
-                } else {
-                    $message = 'Order ID missing';
+
+                    // order id passed - order exists - just update the state
+                    if ($order_id) {
+                        /** @var \Payin7\Models\OrderModel $order */
+                        $order = $this->module->getModelInstance('order');
+                        $loaded = $order->loadPayin7Data($order_id);
+
+                        if ($loaded) {
+                            try {
+                                $ret = $this->processOrderStateChange($new_order_state, $payload, $order, $message, $code);
+                            } catch (Exception $e) {
+                                throw new Exception('Could not process order state change: ' . $e->getMessage(), $e->getCode(), $e->getPrevious());
+                            }
+                        } else {
+                            $message = 'Local order could not be loaded';
+                        }
+                    } else {
+                        $message = 'Order ID was not set';
+                    }
+
+                    $data = array(
+                        'order' => $order->getData()
+                    );
+
+                    /*
+                // resend the order info to Payin7 in case data has changed
+                if ($update_order_to_payin7 && $ret && $order) {
+                   try {
+                        // submit it back to Payin7 to send additinal data created in this process
+                        $order_submitted = $this->module->submitOrder($order, Payin7::SOURCE_NOTIFY, true);
+
+                        if (!$order_submitted) {
+                            throw new Exception('Could not submit created order to payin7');
+                        }
+                    } catch (Exception $e) {
+                        // don't fail here
+                        $this->module->getLogger()->info(get_class($this) . ': payin7 order submission exception :: ' . $e->getMessage());
+                    }
+                    }*/
                 }
 
                 break;
             }
-            case self::CALL_TYPE_PING : {
+            case self::CALL_TYPE_PING: {
                 $message = 'PONG' . "\n" .
                     json_encode($this->module->getSysinfo());
                 break;
@@ -146,10 +232,79 @@ class Payin7NotifyModuleFrontController extends ModuleFrontController
         return $ret;
     }
 
+    protected function createOrderFromCart($cart, $payin7_order_id, $payment_method, $is_sandbox, & $message,
+        /** @noinspection PhpUnusedParameterInspection */
+                                           & $code)
+    {
+        $this->module->getLogger()->info(get_class($this) . ': createOrderFromCart :: ' . $cart->id . ', pd: ' . $payin7_order_id);
+
+        $message = null;
+        $code = null;
+
+        if (!$cart ||
+            !$payin7_order_id ||
+            !$payment_method
+        ) {
+            $message = 'Invalid payment method';
+            return false;
+        }
+
+        /** @var \Payin7\Models\OrderModel $order_model */
+        $order_model = $this->module->getModelInstance('order');
+        $order_id = null;
+
+        Db::getInstance()->execute('BEGIN');
+
+        try {
+            // validate and store the order
+            /** @noinspection PhpUndefinedMethodInspection */
+            $this->module->validateOrder(
+                $cart->id,
+                $this->module->getConfigIdOrderStatePending(),
+                $cart->getOrderTotal(),
+                $this->module->displayName,
+                null,
+                array(),
+                $cart->id_currency,
+                false,
+                $cart->secure_key
+            );
+
+            /** @noinspection PhpUndefinedFieldInspection */
+            $order_id = $this->module->currentOrder;
+
+            if (!$order_id) {
+                Db::getInstance()->execute('ROLLBACK');
+                $this->handleError($this->module->l('Invalid params'), self::RESP_REQUEST_ERR);
+            }
+
+            $order_model->setPaymentMethodCode($payment_method);
+            $order_model->setPayin7SandboxOrder($is_sandbox);
+            $order_model->setCartSecureKey($cart->secure_key);
+            $order_model->setOrderId($order_id);
+            $order_model->setPayin7OrderIdentifier($payin7_order_id);
+            $order_model->setPayin7OrderAccepted(true);
+            $order_model->setPayin7OrderSent(true);
+            $order_model->savePayin7Data();
+
+            Db::getInstance()->execute('COMMIT');
+        } catch (Exception $e) {
+            Db::getInstance()->execute('ROLLBACK');
+            throw $e;
+        }
+
+        $this->module->getLogger()->info(get_class($this) . ': new order created :: ' . $order_id);
+
+        return $order_model;
+    }
+
     protected function processOrderStateChange($new_order_state, array $payload, \Payin7\Models\OrderModel $order, & $message,
         /** @noinspection PhpUnusedParameterInspection */
                                                & $code)
     {
+        $message = null;
+        $code = null;
+
         switch ($new_order_state) {
             case 'cancel' : {
 
@@ -229,19 +384,26 @@ class Payin7NotifyModuleFrontController extends ModuleFrontController
         $this->handleResponse($message, $code, false);
     }
 
-    protected function handleResponse($message, $code, $success = true)
+    protected function handleResponse($message = null, $code = null, $success = true, array $data = null)
     {
         if (!$success) {
             header('HTTP/1.1 500 Internal Server Error');
         }
 
-        echo ($success ? 'OK' : 'KO') . "\n" .
-            (int)$code . "\n" .
-            $message . "\n" .
-            json_encode(array_filter(array(
-                (isset($_POST) ? $_POST : null),
-                (isset($_GET) ? $_GET : null),
-            )));
+        header('Content-Type: application/json');
+        header(self::API_VER_HEADER . ': ' . self::API_VER);
+
+        echo json_encode(array(
+            'status' => ($success ? 'OK' : 'KO'),
+            'status_message' => $message,
+            'status_code' => $code,
+            'data' => (array)$data,
+            'request' => array_filter(array(
+                (isset($_POST) ? (array)$_POST : null),
+                (isset($_GET) ? (array)$_GET : null),
+            ))
+        ));
+
         exit(0);
     }
 }

@@ -6,23 +6,13 @@ Developed and maintaned by Payin7 S.L.
 All rights Reserved, Payin7 S.L. 2016
 =========
 
-1.0.0 (2016-02-01)
+1.0.6 (2016-08-25)
 
-- initial release
+- Major checkout rewrite - orders are now only being created by an SBN call - after the customer has fully been approved and activated the order
 
-1.0.1 (2016-03-16)
+1.0.5 (2016-05-25)
 
-- ability to disable payment methods per store
-
-1.0.2 (2016-03-18)
-
-- compatibility with one page checkout process / onepagecheckoutps responsive plugin
-- bugfixes
-
-1.0.3 (2016-03-29)
-
-- compatibility with PHP 5.3.4 and up
-- bugfixes
+- Store Background Notifications (SBN) capability. Payin7 can now inform shop owners in the background even if the customer did not return back to the store after making a purchase
 
 1.0.4 (2016-05-10)
 
@@ -34,6 +24,20 @@ PAYIN7_OS_CANCELLED - For canceled orders
 
 - disabled internal prestashop emails when checking out with Payin7 to prevent customer / store confusion if payin7 orders do not get completed
 
-1.0.5 (2016-05-25)
+1.0.3 (2016-03-29)
 
-- Store Background Notifications (SBN) capability. Payin7 can now inform shop owners in the background even if the customer did not return back to the store after making a purchase
+- compatibility with PHP 5.3.4 and up
+- bugfixes
+
+1.0.2 (2016-03-18)
+
+- compatibility with one page checkout process / onepagecheckoutps responsive plugin
+- bugfixes
+
+1.0.1 (2016-03-16)
+
+- ability to disable payment methods per store
+
+1.0.0 (2016-02-01)
+
+- initial release

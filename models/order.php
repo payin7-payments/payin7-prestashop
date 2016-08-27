@@ -45,6 +45,8 @@ require_once(__DIR__ . DS . 'quote.php');
  * @method void setPayin7AccessToken($value = null)
  * @method string getPayin7SandboxOrder()
  * @method void setPayin7SandboxOrder($value = null)
+ * @method void setCartSecureKey($value = null)
+ * @method string getCartSecureKey()
  */
 class OrderModel extends QuoteModel
 {

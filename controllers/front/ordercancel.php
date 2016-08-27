@@ -24,35 +24,20 @@
  * @license   http://opensource.org/licenses/GPL-3.0 GNU General Public License, version 3 (GPL-3.0)
  */
 
+/** @noinspection PhpIncludeInspection */
 require_once(__DIR__ . DS . '_orderret.php');
 
 class Payin7OrderCancelModuleFrontController extends Payin7OrderRetModuleFrontController
 {
     public function execute()
     {
-        // check if POST
-        $this->verifyIsPost();
+        $this->module->getLogger()->info(get_class($this) . ': ordercancel');
 
-        $order = $this->getVerifyOrder();
+        $this->getVerifyOrder();
 
         // if we have a REJECT flag - set a cookie which would prevent the user of seeing the payment methods
         if ($this->_is_rejected) {
             $this->module->setRejectCookie(true);
-        }
-
-        /** @var OrderCore $orderm */
-        /** @noinspection PhpUndefinedClassInspection */
-        $orderm = new Order($order->getOrderId());
-
-        if (ValidateCore::isLoadedObject($orderm)) {
-            $state = $orderm->current_state;
-
-            if ($state == $this->module->getConfigIdOrderStatePending()) {
-                $orderm->setCurrentState($this->module->getConfigIdOrderStateCancelled());
-            }
-
-            /** @noinspection PhpUndefinedClassInspection */
-            $this->restoreOrderToCart(new Cart($orderm->id_cart));
         }
 
         Tools::redirect($this->getControllerOrderUrl());

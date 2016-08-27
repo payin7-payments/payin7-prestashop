@@ -75,6 +75,11 @@ abstract class BaseModel
         return null;
     }
 
+    public function __toString()
+    {
+        return (string)print_r((array)$this->_data, true);
+    }
+
     public function initialize(Context $context, $module)
     {
         $this->_context = $context;

@@ -24,6 +24,7 @@
  * @license   http://opensource.org/licenses/GPL-3.0 GNU General Public License, version 3 (GPL-3.0)
  */
 
+/** @noinspection PhpIncludeInspection */
 require_once(__DIR__ . DS . '_base.php');
 
 abstract class Payin7OrderRetModuleFrontController extends Payin7BaseModuleFrontController
@@ -56,9 +57,9 @@ abstract class Payin7OrderRetModuleFrontController extends Payin7BaseModuleFront
 
     protected function verifyHashCheck()
     {
-        $is_sandbox_order = $this->_order->getPayin7SandboxOrder();
+        $is_sandbox_order = $this->module->getConfigApiSandboxMode(); //$this->_order->getPayin7SandboxOrder();
         $secure_key = Tools::getValue('secure_key');
-        $hash_check = Tools::GetValue('hash');
+        $hash_check = Tools::getValue('hash');
 
         if (!$hash_check || !$this->_order_id) {
             return false;
@@ -92,38 +93,41 @@ abstract class Payin7OrderRetModuleFrontController extends Payin7BaseModuleFront
     {
         $order_id = Tools::getValue('order_id');
         $secure_key = Tools::getValue('secure_key');
-        $this->_is_verified = (bool)Tools::GetValue('verified');
-        $this->_is_rejected = (bool)Tools::GetValue('rejected');
-        $this->_is_cancelled = (bool)Tools::GetValue('cancelled');
-        $this->_is_paid = (bool)Tools::GetValue('paid');
-        $this->_order_state = Tools::GetValue('state');
+        $this->_is_verified = (bool)Tools::getValue('verified');
+        $this->_is_rejected = (bool)Tools::getValue('rejected');
+        $this->_is_cancelled = (bool)Tools::getValue('cancelled');
+        $this->_is_paid = (bool)Tools::getValue('paid');
+        $this->_order_state = Tools::getValue('state');
 
         $saved_order = (bool)Tools::getValue('saved_order');
         $this->_is_checkout = !$saved_order;
 
-        if (!$order_id) {
-            $this->handleError($this->module->l('Invalid Request'), self::RESP_REQUEST_ERR);
-        }
+        $order = null;
 
-        /** @var \Payin7\Models\OrderModel $order */
-        $order = $this->module->getModelInstance('order');
-        $loaded = $order->loadPayin7Data($order_id);
+        if ($order_id) {
+            /** @var \Payin7\Models\OrderModel $order */
+            $order = $this->module->getModelInstance('order');
+            $loaded = $order->loadPayin7Data($order_id);
 
-        if (!$loaded) {
-            $this->handleError($this->module->l('Invalid Order'), self::RESP_INVALID_ORDER_ERR);
-        }
-
-        if ($verify_key) {
-            // verify the secure key
-            $key_verified = $this->module->verifyOrderSecureKey($order, $secure_key);
-
-            if (!$key_verified) {
+            /*if (!$loaded) {
                 $this->handleError($this->module->l('Invalid Order'), self::RESP_INVALID_ORDER_ERR);
+            }*/
+
+            $this->_order_id = $order_id;
+
+            if ($loaded) {
+                if ($verify_key) {
+                    // verify the secure key
+                    $key_verified = $this->module->verifyOrderSecureKey($order, $secure_key);
+
+                    if (!$key_verified) {
+                        $this->handleError($this->module->l('Invalid Order'), self::RESP_INVALID_ORDER_ERR);
+                    }
+                }
+
+                $this->_order = $order;
             }
         }
-
-        $this->_order = $order;
-        $this->_order_id = $order_id;
 
         // check the hash check
         if (!$this->verifyHashCheck()) {
@@ -131,6 +135,12 @@ abstract class Payin7OrderRetModuleFrontController extends Payin7BaseModuleFront
         }
 
         return $order;
+    }
+
+    protected function clearCart()
+    {
+        /** @noinspection PhpUndefinedMethodInspection */
+        $this->context->cart->delete();
     }
 
     protected function restoreOrderToCart(/** @noinspection PhpUndefinedClassInspection */

@@ -29,7 +29,6 @@ namespace Payin7\Models;
 use Context;
 use Db;
 use Exception;
-use Logger;
 
 abstract class PlatformAbstractModel extends BaseModel
 {
@@ -63,7 +62,7 @@ abstract class PlatformAbstractModel extends BaseModel
         $needs_update = $this->module->getConfigApiDebugMode() || $force_remote_update || !$last_updated || !$this->getData() ||
             ($last_updated && $last_updated + $refresh_timeout < time());
 
-        if ($needs_update && !isset(self::$remote_update_processed_once[$data_key])) {
+        if ($needs_update && (!isset(self::$remote_update_processed_once[$data_key]) || $force_remote_update)) {
             self::$remote_update_processed_once[$data_key] = true;
 
             // update the data
@@ -87,7 +86,7 @@ abstract class PlatformAbstractModel extends BaseModel
 
         if ($data) {
             $last_updated = $data['last_updated'];
-            $this->setData(@unserialize($data['data']));
+            $this->setData((array)@json_decode($data['data'], true));
             $this->setData('last_updated', $last_updated);
         }
     }
@@ -115,7 +114,7 @@ abstract class PlatformAbstractModel extends BaseModel
         $config = $config ? $config->toArray() : null;
 
         if ($config) {
-            $data = @serialize($config);
+            $data = @json_encode($config);
 
             $db = Db::getInstance();
 
