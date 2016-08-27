@@ -43,7 +43,6 @@ logo.gif \
 logo.png \
 models \
 ordercancel.php \
-orderfinalize.php \
 ordersuccess.php \
 ordervalidate.php \
 payin7.php \
