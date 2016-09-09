@@ -38,7 +38,7 @@ if (!defined('_PS_VERSION_'))
 class Payin7 extends PaymentModule
 {
     const MODULE_NAME = 'payin7';
-    const PLUGIN_VERSION = '1.0.6';
+    const PLUGIN_VERSION = '1.0.7';
     const MIN_PHP_VER = '5.3.3';
 
     const SETTINGS_FORM_NAME = 'submitPayin7Settings';
@@ -1769,6 +1769,41 @@ class Payin7 extends PaymentModule
             (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS']) ||
             (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] == 'https')
         );
+    }
+
+    public function getLatestLogLines()
+    {
+        return $this->readLastFileLines($this->getLogFilename(), 1000, true);
+    }
+
+    private function readLastFileLines($filename, $lines, $revers = false)
+    {
+        $offset = -1;
+        $c = '';
+        $read = '';
+        $i = 0;
+        $fp = @fopen($filename, "r");
+        while ($lines && fseek($fp, $offset, SEEK_END) >= 0) {
+            $c = fgetc($fp);
+            if ($c == "\n" || $c == "\r") {
+                $lines--;
+                if ($revers) {
+                    $read[$i] = strrev($read[$i]);
+                    $i++;
+                }
+            }
+            if ($revers) $read[$i] .= $c;
+            else $read .= $c;
+            $offset--;
+        }
+        fclose($fp);
+        if ($revers) {
+            if ($read[$i] == "\n" || $read[$i] == "\r")
+                array_pop($read);
+            else $read[$i] = strrev($read[$i]);
+            return implode('', $read);
+        }
+        return strrev(rtrim($read, "\n\r"));
     }
 
     public function getIsInAdminArea()

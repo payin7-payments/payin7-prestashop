@@ -6,6 +6,11 @@ Developed and maintaned by Payin7 S.L.
 All rights Reserved, Payin7 S.L. 2016
 =========
 
+1.0.7 (2016-09-09)
+
+- SBN call notification changes, returning the last written log to Payin7 for debugging purposes
+- Bugfixes and optimizations
+
 1.0.6 (2016-08-25)
 
 - Major checkout rewrite - orders are now only being created by an SBN call - after the customer has fully been approved and activated the order

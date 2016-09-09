@@ -36,7 +36,10 @@ class Payin7OrderSuccessModuleFrontController extends Payin7OrderRetModuleFrontC
         // check if POST
         $this->verifyIsPost();
 
-        $this->clearCart();
+        //$this->clearCart();
+        // clear the cart - do not delete it as we might have not yet received a payin7 notification
+        // and if the cart item is deleted - the background notification will not be able to convert it into an order!
+        $this->context->cart = new Cart();
 
         $this->context->smarty->assign(array_merge($this->module->getPayin7SDKTemplateParams(), array(/*'order_identifier' => json_encode($order->getPayin7OrderIdentifier())*/
         )));
