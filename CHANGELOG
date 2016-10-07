@@ -6,6 +6,11 @@ Developed and maintaned by Payin7 S.L.
 All rights Reserved, Payin7 S.L. 2016
 =========
 
+1.0.8 (2016-10-07)
+
+- Notification controller bugfixes
+- Endless loop issue when trying to collect previously stored logs but log file did not exist / was inaccessible
+
 1.0.7 (2016-09-09)
 
 - SBN call notification changes, returning the last written log to Payin7 for debugging purposes

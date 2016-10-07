@@ -38,7 +38,7 @@ if (!defined('_PS_VERSION_'))
 class Payin7 extends PaymentModule
 {
     const MODULE_NAME = 'payin7';
-    const PLUGIN_VERSION = '1.0.7';
+    const PLUGIN_VERSION = '1.0.8';
     const MIN_PHP_VER = '5.3.3';
 
     const SETTINGS_FORM_NAME = 'submitPayin7Settings';
@@ -1778,6 +1778,10 @@ class Payin7 extends PaymentModule
 
     private function readLastFileLines($filename, $lines, $revers = false)
     {
+        if (!file_exists($filename) || !is_readable($filename)) {
+            return null;
+        }
+
         $offset = -1;
         $c = '';
         $read = '';

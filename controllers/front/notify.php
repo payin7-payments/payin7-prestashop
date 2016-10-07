@@ -186,7 +186,7 @@ class Payin7NotifyModuleFrontController extends ModuleFrontController
 
                 // order id passed - order exists - just update the state
                 $msg2 = null;
-                $rret = false;
+                $rret = true;
 
                 if ($ret) {
                     if ($payin7_order_id) {
@@ -197,23 +197,17 @@ class Payin7NotifyModuleFrontController extends ModuleFrontController
                         if ($loaded) {
                             try {
                                 $rret = $this->processOrderStateChange($new_order_state, $payload, $order, $msg2, $code);
-
-                                if (!$rret && !$create_if_missing) {
-                                    // do not reuse this status if we were creating the order previously
-                                    $ret = $rret;
-                                    $message = $msg2;
-                                }
-
                             } catch (Exception $e) {
-                                throw new Exception('Could not process order state change: ' . $e->getMessage(), $e->getCode(), $e->getPrevious());
+                                $msg2 = $e->getMessage();
+                                $rret = false;
                             }
                         } else {
-                            $message = 'Local order could not be loaded (' . $payin7_order_id . ')';
-                            $ret = false;
+                            $msg2 = 'Local order could not be loaded (' . $payin7_order_id . ')';
+                            $rret = false;
                         }
                     } else {
-                        $message = 'Order ID was not set';
-                        $ret = false;
+                        $msg2 = 'Order ID was not set';
+                        $rret = false;
                     }
                 }
 
@@ -224,6 +218,12 @@ class Payin7NotifyModuleFrontController extends ModuleFrontController
                         'success' => $rret
                     )
                 );
+
+                if (!$rret && !$create_if_missing) {
+                    // do not reuse this status if we were creating the order previously
+                    $ret = $rret;
+                    $message = $msg2;
+                }
 
                 break;
             }

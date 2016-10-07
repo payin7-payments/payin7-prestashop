@@ -3,4 +3,5 @@ phpunit.xml
 composer.lock
 vendor/*
 *.swp
+.DS_Store
 logs.txt
