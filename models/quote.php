@@ -28,9 +28,9 @@ namespace Payin7\Models;
 
 use Context;
 
-require_once(__DIR__ . DS . 'order_item.php');
-require_once(__DIR__ . DS . 'customer.php');
-require_once(__DIR__ . DS . 'address.php');
+require_once __DIR__ . DS . 'order_item.php';
+require_once __DIR__ . DS . 'customer.php';
+require_once __DIR__ . DS . 'address.php';
 
 /**
  * Class QuoteModel

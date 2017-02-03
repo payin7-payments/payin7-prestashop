@@ -88,7 +88,7 @@ abstract class BaseModel
 
     public function getData($key = null)
     {
-        return (isset($key) ? (isset($this->_data[$key]) ? $this->_data[$key] : null) : $this->_data);
+        return (null !== $key ? (isset($this->_data[$key]) ? $this->_data[$key] : null) : $this->_data);
     }
 
     public function setData($key, $data = null)

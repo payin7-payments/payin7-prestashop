@@ -28,9 +28,9 @@ if (!defined('__INC__')) {
     die();
 }
 
-include(dirname(__FILE__) . '/../../config/config.inc.php');
+include __DIR__ . '/../../config/config.inc.php';
 
-$is14 = version_compare(_PS_VERSION_, "1.5", "<");
+$is14 = version_compare(_PS_VERSION_, '1.5', '<');
 
 if (!$is14) {
     die();
@@ -39,17 +39,17 @@ if (!$is14) {
 $front_ctrl = new FrontController();
 $front_ctrl->init();
 
-require_once('./payin7.php');
+require_once './payin7.php';
 $module = new Payin7();
 
 function _execCompatController($class, $filename)
 {
     global $module;
 
-    include(__DIR__ . '/../../header.php');
+    include __DIR__ . '/../../header.php';
 
     /** @noinspection PhpIncludeInspection */
-    require_once(__DIR__ . DS . 'controllers' . DS . 'front' . DS . $filename . '.php');
+    require_once __DIR__ . DS . 'controllers' . DS . 'front' . DS . $filename . '.php';
 
     $context = Context::getContext();
 
@@ -66,7 +66,7 @@ function _execCompatController($class, $filename)
         echo 'Error: ' . $e->getMessage();
     }
 
-    include(dirname(__FILE__) . '/../../footer.php');
+    include dirname(__FILE__) . '/../../footer.php';
 }
 
 

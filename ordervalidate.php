@@ -25,5 +25,5 @@
  */
 
 define('__INC__', true);
-include(__DIR__ . '/_ctrlexec.php');
+include __DIR__ . '/_ctrlexec.php';
 _execCompatController('Payin7OrderValidate', 'ordervalidate');

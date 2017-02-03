@@ -71,7 +71,7 @@ class Payin7NotifyModuleFrontController extends ModuleFrontController
 
         // check the request
         if (!$this->debug) {
-            if (!isset($_POST) || !$_POST) {
+            if (null === $_POST || !$_POST) {
                 $this->handleError($this->module->l('Invalid Request 1'), self::RESP_REQUEST_ERR);
             }
         }
@@ -111,6 +111,15 @@ class Payin7NotifyModuleFrontController extends ModuleFrontController
         $this->handleResponse($message, $code, $success, $data);
     }
 
+    /**
+     * @param $call_type
+     * @param array $payload
+     * @param $message
+     * @param $code
+     * @param array|null $data
+     * @return bool
+     * @throws Exception
+     */
     protected function processPayload($call_type, array $payload, & $message, & $code, array & $data = null)
     {
         $message = null;
@@ -135,51 +144,49 @@ class Payin7NotifyModuleFrontController extends ModuleFrontController
 
                 $order = null;
 
-                if ($create_if_missing) {
-                    if (!$store_order_id) {
-                        // no store order id passed - order may not exist yet
-                        $cart_id = isset($payload['store_cart_id']) ? $payload['store_cart_id'] : null;
-                        //$cart_secure_key = isset($payload['store_cart_secure_key']) ? $payload['store_cart_secure_key'] : null;
+                if ($create_if_missing && !$store_order_id) {
+                    // no store order id passed - order may not exist yet
+                    $cart_id = isset($payload['store_cart_id']) ? $payload['store_cart_id'] : null;
+                    //$cart_secure_key = isset($payload['store_cart_secure_key']) ? $payload['store_cart_secure_key'] : null;
 
-                        if (!$cart_id) {
-                            $message = 'Cart id / skey / pdata not passed';
-                            $ret = false;
-                        } else {
-                            /** @var CartCore $cart */
+                    if (!$cart_id) {
+                        $message = 'Cart id / skey / pdata not passed';
+                        $ret = false;
+                    } else {
+                        /** @var CartCore $cart */
+                        /** @noinspection PhpUndefinedClassInspection */
+                        $cart = new Cart((int)$cart_id);
+
+                        /** @noinspection PhpUndefinedClassInspection */
+                        if ($cart && Validate::isLoadedObject($cart) && $cart->id) {
+
+                            // check if order already exists
                             /** @noinspection PhpUndefinedClassInspection */
-                            $cart = new Cart((int)$cart_id);
+                            $order_p = Order::getOrderByCartId((int)$cart->id);
 
                             /** @noinspection PhpUndefinedClassInspection */
-                            if ($cart && Validate::isLoadedObject($cart) && $cart->id) {
+                            $has_order = $order_p && Validate::isLoadedObject($order_p);
 
-                                // check if order already exists
-                                /** @noinspection PhpUndefinedClassInspection */
-                                $order_p = Order::getOrderByCartId((int)($cart->id));
+                            /** @noinspection PhpUndefinedClassInspection */
+                            if (!$has_order) {
+                                try {
+                                    $order = $this->createOrderFromCart($cart,
+                                        $payin7_order_id,
+                                        $payment_method,
+                                        $is_sandbox,
+                                        $message, $code);
 
-                                /** @noinspection PhpUndefinedClassInspection */
-                                $has_order = $order_p && Validate::isLoadedObject($order_p);
-
-                                /** @noinspection PhpUndefinedClassInspection */
-                                if (!$has_order) {
-                                    try {
-                                        $order = $this->createOrderFromCart($cart,
-                                            $payin7_order_id,
-                                            $payment_method,
-                                            $is_sandbox,
-                                            $message, $code);
-
-                                        if (!$order) {
-                                            $message = 'Could not create order from cart (2)';
-                                            $ret = false;
-                                        }
-                                    } catch (Exception $e) {
-                                        throw new Exception('Could not create order from cart: ' . $e->getMessage(), $e->getCode(), $e->getPrevious());
+                                    if (!$order) {
+                                        $message = 'Could not create order from cart (2)';
+                                        $ret = false;
                                     }
+                                } catch (Exception $e) {
+                                    throw new Exception('Could not create order from cart: ' . $e->getMessage(), $e->getCode(), $e->getPrevious());
                                 }
-                            } else {
-                                $message = 'Cart item not found';
-                                $ret = false;
                             }
+                        } else {
+                            $message = 'Cart item not found';
+                            $ret = false;
                         }
                     }
                 }
@@ -212,7 +219,7 @@ class Payin7NotifyModuleFrontController extends ModuleFrontController
                 }
 
                 $data = array(
-                    'order' => ($order ? $order->getData() : null),
+                    'order' => $order ? $order->getData() : null,
                     'op2' => array(
                         'message' => $msg2,
                         'success' => $rret
@@ -254,6 +261,19 @@ class Payin7NotifyModuleFrontController extends ModuleFrontController
         ) {
             $message = 'Invalid payment method';
             return false;
+        }
+
+        // because we are creating the order as a background process
+        // without the user consent - there is an issue with country geo/autodetection
+        // it will always detect the country of the server which sent the notification
+        // If this country is disable in the Prestashop system - the order creation process
+        // will fail. So we manually 'fake' enable it and restore it at the end of the order
+        // creation process
+        $oldcactive = null;
+
+        if ($this->context->country) {
+            $oldcactive = $this->context->country->active;
+            $this->context->country->active = 1;
         }
 
         /** @var \Payin7\Models\OrderModel $order_model */
@@ -298,6 +318,11 @@ class Payin7NotifyModuleFrontController extends ModuleFrontController
         } catch (Exception $e) {
             Db::getInstance()->execute('ROLLBACK');
             throw $e;
+        }
+
+        // restore the changed country active state
+        if ($this->context->country && null !== $oldcactive) {
+            $this->context->country->active = $oldcactive;
         }
 
         $this->module->getLogger()->info(get_class($this) . ': new order created :: ' . $order_id);
@@ -408,13 +433,13 @@ class Payin7NotifyModuleFrontController extends ModuleFrontController
         }
 
         echo json_encode(array(
-            'status' => ($success ? 'OK' : 'KO'),
+            'status' => $success ? 'OK' : 'KO',
             'status_message' => $message,
             'status_code' => $code,
             'data' => (array)$data,
             'request' => array_filter(array(
-                (isset($_POST) ? (array)$_POST : null),
-                (isset($_GET) ? (array)$_GET : null),
+                isset($_POST) ? (array)$_POST : null,
+                isset($_GET) ? (array)$_GET : null,
             )),
             'notify_apiver' => self::API_VER,
             'sysinfo' => $this->module->getSysinfo(),

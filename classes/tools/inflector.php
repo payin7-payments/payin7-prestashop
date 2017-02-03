@@ -64,8 +64,7 @@ class Inflector
 
     public static function asFolderName($input)
     {
-        $input = StringUtils::toAlphaNum($input, array('-', '.', ':'));
-        return $input;
+        return StringUtils::toAlphaNum($input, array('-', '.', ':'));
     }
 
     # when we need to remove 'c','v','t' to find a filename

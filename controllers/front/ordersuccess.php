@@ -25,7 +25,7 @@
  */
 
 /** @noinspection PhpIncludeInspection */
-require_once(__DIR__ . DS . '_orderret.php');
+require_once __DIR__ . DS . '_orderret.php';
 
 class Payin7OrderSuccessModuleFrontController extends Payin7OrderRetModuleFrontController
 {

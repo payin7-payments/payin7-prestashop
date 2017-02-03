@@ -28,7 +28,7 @@ namespace Payin7\Models;
 
 use Db;
 
-require_once(__DIR__ . DS . 'quote.php');
+require_once __DIR__ . DS . 'quote.php';
 
 /**
  * Class OrderModel

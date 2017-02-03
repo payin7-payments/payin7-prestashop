@@ -104,7 +104,7 @@ class OrderSubmitModel extends BaseModel
             'updated_on' => $this->_order->getUpdatedAt(),
             'state' => $this->_order->getState(),
             'status' => $this->_order->getStatus(),
-            'is_gift' => ($this->_order->getGiftMessageId() != null),
+            'is_gift' => $this->_order->getGiftMessageId() != null,
             'ref_quote_id' => $this->_order->getQuoteId(),
             'cart_secure_key' => $this->_order->getCartSecureKey(),
             'order_subtotal_with_tax' => $this->_order->getSubtotalInclTax(),

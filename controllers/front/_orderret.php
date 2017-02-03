@@ -25,7 +25,7 @@
  */
 
 /** @noinspection PhpIncludeInspection */
-require_once(__DIR__ . DS . '_base.php');
+require_once __DIR__ . DS . '_base.php';
 
 abstract class Payin7OrderRetModuleFrontController extends Payin7BaseModuleFrontController
 {
@@ -84,7 +84,7 @@ abstract class Payin7OrderRetModuleFrontController extends Payin7BaseModuleFront
 
     protected function verifyIsPost()
     {
-        if (!isset($_POST) || !$_POST) {
+        if (null === $_POST || !$_POST) {
             $this->handleError($this->module->l('Invalid Request'), self::RESP_REQUEST_ERR);
         }
     }
@@ -187,29 +187,32 @@ abstract class Payin7OrderRetModuleFrontController extends Payin7BaseModuleFront
 
                     /** @noinspection PhpUndefinedClassInspection */
                     /** @noinspection PhpUndefinedFieldInspection */
-                    $producToAdd = new Product((int)($idProduct), true, (int)($cart->id_lang));
+                    $producToAdd = new Product((int)$idProduct, true, (int)$cart->id_lang);
 
                     /** @noinspection PhpUndefinedFieldInspection */
-                    if ((!$producToAdd->id || !$producToAdd->active)) {
+                    if (!$producToAdd->id || !$producToAdd->active) {
                         continue;
                     }
 
                     /* Check the quantity availability  */
-                    if ($idProductAttribute > 0 AND is_numeric($idProductAttribute)) {
+                    if ($idProductAttribute > 0 && is_numeric($idProductAttribute)) {
                         /** @noinspection PhpUndefinedClassInspection */
                         /** @noinspection PhpUndefinedMethodInspection */
                         /** @noinspection PhpUndefinedFieldInspection */
-                        if (!$producToAdd->isAvailableWhenOutOfStock($producToAdd->out_of_stock) AND !Attribute::checkAttributeQty((int)$idProductAttribute, (int)$qty)) {
+                        if (!$producToAdd->isAvailableWhenOutOfStock($producToAdd->out_of_stock) &&
+                            !Attribute::checkAttributeQty((int)$idProductAttribute, (int)$qty)
+                        ) {
                             /* There is not enough product attribute in stock - set customer qty to current stock on hand */
                             /** @noinspection PhpUndefinedFunctionInspection */
                             $qty = getAttributeQty($idProductAttribute);
                         }
-                    } /** @noinspection PhpUndefinedMethodInspection */ elseif (!$producToAdd->checkQty((int)$qty))
+                    } /** @noinspection PhpUndefinedMethodInspection */ elseif (!$producToAdd->checkQty((int)$qty)) {
                         /* There is not enough product in stock - set customer qty to current stock on hand */
                         /** @noinspection PhpUndefinedMethodInspection */
                         $qty = $producToAdd->getQuantity($idProduct);
+                    }
 
-                    $new_cart->updateQty((int)($qty), (int)($idProduct), (int)($idProductAttribute), NULL, 'up');
+                    $new_cart->updateQty((int)$qty, (int)$idProduct, (int)$idProductAttribute, NULL, 'up');
 
                     unset($p);
                 }

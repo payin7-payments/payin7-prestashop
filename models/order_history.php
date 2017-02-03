@@ -60,7 +60,7 @@ class OrderHistoryModel extends BaseModel
         /** @noinspection PhpUndefinedMethodInspection */
         return $this->_saveOrderHistory($order, $payin7_order_identifier, self::DOC_UPDATED, array(
             'document_type' => $document_type,
-            'document_data' => ($document_object ? $this->_filterModelSimpleData($document_object->getFields()) : null)
+            'document_data' => $document_object ? $this->_filterModelSimpleData($document_object->getFields()) : null
         ));
     }
 
@@ -96,7 +96,7 @@ class OrderHistoryModel extends BaseModel
             'order_unique_id' => $payin7_order_identifier,
             'created_on' => date('Y-m-d H:i:s'),
             'change_type' => $change_type,
-            'data' => ($data ? @serialize($data) : null)
+            'data' => $data ? @serialize($data) : null
         ));
 
         return $this;

@@ -30,7 +30,7 @@ namespace Payin7\API;
 use Payin7Payments\Exception\Payin7APIException;
 use Payin7Payments\Payin7PaymentsClient;
 
-require_once(__DIR__ . DS . 'payin7-php' . DS . 'vendor' . DS . 'autoload.php');
+require_once __DIR__ . DS . 'payin7-php' . DS . 'vendor' . DS . 'autoload.php';
 
 class ApiClient
 {
@@ -80,12 +80,12 @@ class ApiClient
 
     public function setConnectTimeout($timeout)
     {
-        $this->_connect_timeout = ($timeout ? $timeout : self::API_CLIENT_CONNECT_TIMEOUT);
+        $this->_connect_timeout = ($timeout ?: self::API_CLIENT_CONNECT_TIMEOUT);
     }
 
     public function setTimeout($timeout)
     {
-        $this->_timeout = ($timeout ? $timeout : self::API_CLIENT_TIMEOUT);
+        $this->_timeout = ($timeout ?: self::API_CLIENT_TIMEOUT);
     }
 
     protected function _configureDefaults()
@@ -115,7 +115,7 @@ class ApiClient
 
             error_log("[API SERVER ERROR] Status Code: {$code} | Body: {$body}");
         } else {
-            error_log("[API SERVER ERROR] " . $e->getMessage() . ', Code: ' . $e->getCode());
+            error_log('[API SERVER ERROR] ' . $e->getMessage() . ', Code: ' . $e->getCode());
         }
     }
 

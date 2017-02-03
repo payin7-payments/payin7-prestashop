@@ -56,20 +56,24 @@ class StringUtils
 
     public static function splitEmail($str)
     {
-        $str .= " ";
+        $str .= ' ';
         $sPattern = '/([\w\s\'\"]+[\s]+)?(<)?(([\w-\.]+)@((?:[\w]+\.)+)([a-zA-Z]{2,4}))?(>)?/';
         preg_match($sPattern, $str, $aMatch);
-        $name = (isset($aMatch[1])) ? $aMatch[1] : '';
-        $email = (isset($aMatch[3])) ? $aMatch[3] : '';
+        $name = isset($aMatch[1]) ? $aMatch[1] : '';
+        $email = isset($aMatch[3]) ? $aMatch[3] : '';
         return array('name' => trim($name), 'email' => trim($email));
     }
 
+    /**
+     * @param array $key_cols
+     * @param array $keywords
+     * @param string|null $prefix
+     * @return string
+     */
     public static function permaLink(array $key_cols, array $keywords, $prefix = null)
     {
-        if (isset($prefix)) {
-            if ($prefix{0} != '/') {
-                $prefix = '/' . $prefix;
-            }
+        if (null !== $prefix && $prefix{0} !== '/') {
+            $prefix = '/' . $prefix;
         }
 
         $key_separator = '-';
@@ -97,25 +101,18 @@ class StringUtils
         $url =
             (isset($prefix) ? $prefix . '/' : null) .
             (($key_ && $keywords_) ? $key_ . '/' : null) .
-            ($keywords_ ? $keywords_ : null);
+            ($keywords_ ?: null);
 
         return $url;
     }
 
     public static function keyLink($txt)
     {
-        if (strlen($txt) < 1) {
+        if (!$txt) {
             return false;
         }
 
-        $txt = str_replace('@', ' ', $txt);
-        $txt = str_replace('%', ' ', $txt);
-
-        $txt = str_replace('+', ' ', $txt);
-        $txt = str_replace('/', ' ', $txt);
-        $txt = str_replace('.', ' ', $txt);
-
-        $txt = str_replace('_', ' ', $txt);
+        $txt = str_replace(array('@', '%', '+', '/', '.', '_'), ' ', $txt);
 
         $txt = urlencode($txt);
         return $txt;
@@ -328,7 +325,7 @@ class StringUtils
         foreach ($query as $t) {
             $t = explode('=', $t);
 
-            if (!isset($t[0]) || !isset($t[1])) {
+            if (!isset($t[0], $t[1])) {
                 continue;
             }
 
@@ -369,12 +366,11 @@ class StringUtils
 
         $string = '';
 
-        if ($readable) {
-            $possible_charactors = "abcdefghmnprstuvwz23457ABCDEFGHMNPRSTUVWYZ";
-        } else {
-            $possible_charactors = "abcdefghijklmnopqrstuvwxyz1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-        }
+        $possible_charactors = 'abcdefghijklmnopqrstuvwxyz1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
+        if ($readable) {
+            $possible_charactors = 'abcdefghmnprstuvwz23457ABCDEFGHMNPRSTUVWYZ';
+        }
 
         for ($i = 0; $i < $length; $i++) {
             if ($readable) {
@@ -393,6 +389,7 @@ class StringUtils
 
         $t = 0;
         $len = strlen($string);
+
         for ($i = 0; $i < $len; $i++) {
             $tmp = $string{$i};
             if (strtoupper($tmp) === $tmp) {
@@ -419,14 +416,14 @@ class StringUtils
      */
     public static function sanitize($string, $force_lowercase = true, $anal = false)
     {
-        $strip = array("~", "`", "!", "@", "#", "$", "%", "^", "&", "*", "(", ")", "_", "=", "+", "[", "{", "]",
-            "}", "\\", "|", ";", ":", "\"", "'", "&#8216;", "&#8217;", "&#8220;", "&#8221;", "&#8211;", "&#8212;",
-            "â€”", "â€“", ",", "<", ".", ">", "/", "?");
+        $strip = array('~', '`', '!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '_', '=', '+', '[', '{', ']',
+            '}', "\\", '|', ';', ':', '"', '\'', '&#8216;', '&#8217;', '&#8220;', '&#8221;', '&#8211;', '&#8212;',
+            'â€”', 'â€“', ',', '<', '.', '>', '/', '?');
         $clean = trim(str_replace($strip, "", strip_tags($string)));
-        $clean = preg_replace('/\s+/', "-", $clean);
-        $clean = ($anal) ? preg_replace("/[^a-zA-Z0-9]/", "", $clean) : $clean;
-        return ($force_lowercase) ?
-            (function_exists('mb_strtolower')) ?
+        $clean = preg_replace('/\s+/', '-', $clean);
+        $clean = $anal ? preg_replace('/[^a-zA-Z0-9]/', "", $clean) : $clean;
+        return $force_lowercase ?
+            function_exists('mb_strtolower') ?
                 mb_strtolower($clean, 'UTF-8') :
                 strtolower($clean) :
             $clean;
@@ -442,8 +439,7 @@ class StringUtils
         $htmlcode = strip_tags($htmlcode);
 
         if ($no_new_lines) {
-            $htmlcode = str_replace("\n", ' ', $htmlcode);
-            $htmlcode = str_replace("\r", ' ', $htmlcode);
+            $htmlcode = str_replace(array("\n", "\r"), ' ', $htmlcode);
         }
 
         return $htmlcode;
@@ -627,7 +623,7 @@ class StringUtils
         $str = preg_replace('/(' . preg_quote($options['delimiter'], '/') . '){2,}/', '$1', $str);
 
         // Truncate slug to max. characters
-        $str = mb_substr($str, 0, ($options['limit'] ? $options['limit'] : mb_strlen($str, 'UTF-8')), 'UTF-8');
+        $str = mb_substr($str, 0, ($options['limit'] ?: mb_strlen($str, 'UTF-8')), 'UTF-8');
 
         // Remove delimiter from ends
         $str = trim($str, $options['delimiter']);
@@ -776,6 +772,7 @@ class StringUtils
         if ($offset < 0) {
             $strlen = strlen(utf8_decode($str));        // see notes
             $offset = $strlen + $offset;
+            /** @noinspection NotOptimalIfConditionsInspection */
             if ($offset < 0) {
                 $offset = 0;
             }
@@ -861,7 +858,7 @@ class StringUtils
 
         $year_diff = date('Y') - $year;
 
-        if (date("m") < $month || (date("m") == $month && date("d") < $day)) {
+        if (date('m') < $month || (date('m') == $month && date('d') < $day)) {
             $year_diff--;
         }
 
@@ -872,10 +869,10 @@ class StringUtils
     {
         $ret = $prefix;
 
-        srand();
+        mt_srand();
 
         for ($i = 0, $lenght = ($lenght - strlen($prefix) - strlen($suffix)); $i < $lenght; $i++) {
-            $ret .= rand(0, 9);
+            $ret .= mt_rand(0, 9);
         }
 
         $ret .= $suffix;
@@ -896,22 +893,31 @@ class StringUtils
             if (strpos($_SERVER['HTTP_X_FORWARDED_FOR'], ',') !== false) {
                 $iplist = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
                 foreach ($iplist as $ip) {
-                    if (self::validateIpAddress($ip))
+                    if (self::validateIpAddress($ip)) {
                         return $ip;
+                    }
                 }
             } else {
-                if (self::validateIpAddress($_SERVER['HTTP_X_FORWARDED_FOR']))
+                if (self::validateIpAddress($_SERVER['HTTP_X_FORWARDED_FOR'])) {
                     return $_SERVER['HTTP_X_FORWARDED_FOR'];
+                }
             }
         }
-        if (!empty($_SERVER['HTTP_X_FORWARDED']) && self::validateIpAddress($_SERVER['HTTP_X_FORWARDED']))
+        if (!empty($_SERVER['HTTP_X_FORWARDED']) && self::validateIpAddress($_SERVER['HTTP_X_FORWARDED'])) {
             return $_SERVER['HTTP_X_FORWARDED'];
-        if (!empty($_SERVER['HTTP_X_CLUSTER_CLIENT_IP']) && self::validateIpAddress($_SERVER['HTTP_X_CLUSTER_CLIENT_IP']))
+        }
+
+        if (!empty($_SERVER['HTTP_X_CLUSTER_CLIENT_IP']) && self::validateIpAddress($_SERVER['HTTP_X_CLUSTER_CLIENT_IP'])) {
             return $_SERVER['HTTP_X_CLUSTER_CLIENT_IP'];
-        if (!empty($_SERVER['HTTP_FORWARDED_FOR']) && self::validateIpAddress($_SERVER['HTTP_FORWARDED_FOR']))
+        }
+
+        if (!empty($_SERVER['HTTP_FORWARDED_FOR']) && self::validateIpAddress($_SERVER['HTTP_FORWARDED_FOR'])) {
             return $_SERVER['HTTP_FORWARDED_FOR'];
-        if (!empty($_SERVER['HTTP_FORWARDED']) && self::validateIpAddress($_SERVER['HTTP_FORWARDED']))
+        }
+
+        if (!empty($_SERVER['HTTP_FORWARDED']) && self::validateIpAddress($_SERVER['HTTP_FORWARDED'])) {
             return $_SERVER['HTTP_FORWARDED'];
+        }
 
         // return unreliable ip since all else failed
         return $_SERVER['REMOTE_ADDR'];
@@ -925,8 +931,9 @@ class StringUtils
      */
     public static function validateIpAddress($ip)
     {
-        if (strtolower($ip) === 'unknown')
+        if (strtolower($ip) === 'unknown') {
             return false;
+        }
 
         // generate ipv4 network address
         $ip = ip2long($ip);
@@ -938,14 +945,17 @@ class StringUtils
             // signed numbers (ints default to signed in PHP)
             $ip = sprintf('%u', $ip);
             // do private network range checking
-            if ($ip >= 0 && $ip <= 50331647) return false;
-            if ($ip >= 167772160 && $ip <= 184549375) return false;
-            if ($ip >= 2130706432 && $ip <= 2147483647) return false;
-            if ($ip >= 2851995648 && $ip <= 2852061183) return false;
-            if ($ip >= 2886729728 && $ip <= 2887778303) return false;
-            if ($ip >= 3221225984 && $ip <= 3221226239) return false;
-            if ($ip >= 3232235520 && $ip <= 3232301055) return false;
-            if ($ip >= 4294967040) return false;
+            if (($ip >= 0 && $ip <= 50331647) ||
+                ($ip >= 167772160 && $ip <= 184549375) ||
+                ($ip >= 2130706432 && $ip <= 2147483647) ||
+                ($ip >= 2851995648 && $ip <= 2852061183) ||
+                ($ip >= 2886729728 && $ip <= 2887778303) ||
+                ($ip >= 3221225984 && $ip <= 3221226239) ||
+                ($ip >= 3232235520 && $ip <= 3232301055) ||
+                ($ip >= 4294967040)
+            ) {
+                return false;
+            }
         }
         return true;
     }
@@ -954,9 +964,19 @@ class StringUtils
     {
         static $letters = 'AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz';
         $n = (int)$n % 26;
-        if (!$n) return $s;
-        if ($n < 0) $n += 26;
-        if ($n == 13) return str_rot13($s);
+
+        if (!$n) {
+            return $s;
+        }
+
+        if ($n < 0) {
+            $n += 26;
+        }
+
+        if ($n === 13) {
+            return str_rot13($s);
+        }
+
         $rep = substr($letters, $n * 2) . substr($letters, 0, $n * 2);
         return strtr($s, $letters, $rep);
     }

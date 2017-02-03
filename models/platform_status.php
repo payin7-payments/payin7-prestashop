@@ -26,7 +26,7 @@
 
 namespace Payin7\Models;
 
-require_once(__DIR__ . DS . 'platform_abstract.php');
+require_once __DIR__ . DS . 'platform_abstract.php';
 
 class PlatformStatusModel extends PlatformAbstractModel
 {

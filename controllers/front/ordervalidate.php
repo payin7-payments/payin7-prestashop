@@ -25,13 +25,13 @@
  */
 
 /** @noinspection PhpIncludeInspection */
-require_once(__DIR__ . DS . '_base.php');
+require_once __DIR__ . DS . '_base.php';
 
 class Payin7OrderValidateModuleFrontController extends Payin7BaseModuleFrontController
 {
     public function execute()
     {
-        $this->module->getLogger()->info(get_class($this) . ': ordervalidate :: ' . print_r((isset($_POST) && $_POST ? $_POST : $_GET), true));
+        $this->module->getLogger()->info(get_class($this) . ': ordervalidate :: ' . print_r((null !== $_POST && $_POST ? $_POST : $_GET), true));
 
         $payment_method = Tools::getValue('payment_method');
 
@@ -61,7 +61,14 @@ class Payin7OrderValidateModuleFrontController extends Payin7BaseModuleFrontCont
         $order_model->setPayin7SandboxOrder($this->module->getConfigApiSandboxMode());
         $order_model->setCartSecureKey($cart->secure_key);
 
-        $order_submitted = $this->module->submitOrder($order_model);
+        $err_msg = null;
+
+        try {
+            $order_submitted = $this->module->submitOrder($order_model);
+        } catch (Exception $e) {
+            $order_submitted = false;
+            $this->module->getLogger()->info(get_class($this) . ': ordervalidate unhandled exception :: ' . $e->getMessage());
+        }
 
         if (!$order_submitted) {
             $this->handleError($this->module->l('Order could not be submitted'), self::RESP_ORDER_SUBMIT_ERR);

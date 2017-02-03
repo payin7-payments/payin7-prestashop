@@ -24,8 +24,9 @@
  * @license   http://opensource.org/licenses/GPL-3.0 GNU General Public License, version 3 (GPL-3.0)
  */
 
-if (!defined('_PS_VERSION_'))
+if (!defined('_PS_VERSION_')) {
     exit;
+}
 
 /** @noinspection PhpUndefinedClassInspection */
 
@@ -38,7 +39,7 @@ if (!defined('_PS_VERSION_'))
 class Payin7 extends PaymentModule
 {
     const MODULE_NAME = 'payin7';
-    const PLUGIN_VERSION = '1.0.8';
+    const PLUGIN_VERSION = '1.0.10';
     const MIN_PHP_VER = '5.3.3';
 
     const SETTINGS_FORM_NAME = 'submitPayin7Settings';
@@ -203,15 +204,15 @@ class Payin7 extends PaymentModule
         /** @noinspection PhpUndefinedMethodInspection */
         $this->description = $this->l('Finance your Dreams!');
 
-        $this->_is14 = version_compare(_PS_VERSION_, "1.5", "<");
-        $this->_is15up = version_compare(_PS_VERSION_, "1.5", ">=");
-        $this->_is15 = version_compare(_PS_VERSION_, "1.5", ">=") && version_compare(_PS_VERSION_, "1.6", "<");
+        $this->_is14 = version_compare(_PS_VERSION_, '1.5', '<');
+        $this->_is15up = version_compare(_PS_VERSION_, '1.5', '>=');
+        $this->_is15 = version_compare(_PS_VERSION_, '1.5', '>=') && version_compare(_PS_VERSION_, '1.6', '<');
 
         /* Backward compatibility */
         /** @noinspection PhpIncludeInspection */
         if (_PS_VERSION_ < '1.5') {
             /** @noinspection PhpIncludeInspection */
-            require(_PS_MODULE_DIR_ . $this->name . '/backward_compatibility/backward.php');
+            require _PS_MODULE_DIR_ . $this->name . '/backward_compatibility/backward.php';
         }
 
         if (!defined('DS')) {
@@ -219,7 +220,7 @@ class Payin7 extends PaymentModule
         }
 
         /** @noinspection PhpIncludeInspection */
-        require_once(__DIR__ . DS . 'classes' . DS . 'logger' . DS . 'Payin7Logger.php');
+        require_once __DIR__ . DS . 'classes' . DS . 'logger' . DS . 'Payin7Logger.php';
 
         $this->logger = Payin7Logger::getInstance()
             ->setFilename($this->getLogFilename())
@@ -227,17 +228,17 @@ class Payin7 extends PaymentModule
 
         // models
         /** @noinspection PhpIncludeInspection */
-        require_once(__DIR__ . DS . 'models' . DS . 'base.php');
+        require_once __DIR__ . DS . 'models' . DS . 'base.php';
 
         // tools
         /** @noinspection PhpIncludeInspection */
-        require_once(__DIR__ . DS . 'classes' . DS . 'tools' . DS . 'shortcuts.php');
+        require_once __DIR__ . DS . 'classes' . DS . 'tools' . DS . 'shortcuts.php';
         /** @noinspection PhpIncludeInspection */
-        require_once(__DIR__ . DS . 'classes' . DS . 'tools' . DS . 'inflector.php');
+        require_once __DIR__ . DS . 'classes' . DS . 'tools' . DS . 'inflector.php';
         /** @noinspection PhpIncludeInspection */
-        require_once(__DIR__ . DS . 'classes' . DS . 'tools' . DS . 'string_utils.php');
+        require_once __DIR__ . DS . 'classes' . DS . 'tools' . DS . 'string_utils.php';
         /** @noinspection PhpIncludeInspection */
-        require_once(__DIR__ . DS . 'classes' . DS . 'tools' . DS . 'unicode.php');
+        require_once __DIR__ . DS . 'classes' . DS . 'tools' . DS . 'unicode.php';
     }
 
     protected function getLogFilename()
@@ -332,9 +333,10 @@ class Payin7 extends PaymentModule
     {
         if (version_compare(_PS_VERSION_, '1.5', '<')) {
             foreach (array('1.0.4') as $version) {
-                $file = dirname(__FILE__) . '/upgrade/install-' . $version . '.php';
+                $file = __DIR__ . '/upgrade/install-' . $version . '.php';
                 /** @noinspection PhpUndefinedClassInspection */
-                if (version_compare(Configuration::get('PAYIN7_VERSION'), $version, '<') && file_exists($file)) {
+                if (file_exists($file) && version_compare(Configuration::get('PAYIN7_VERSION'), $version, '<')) {
+                    /** @noinspection PhpIncludeInspection */
                     include_once $file;
                     call_user_func('upgrade_module_' . str_replace('.', '_', $version), $this, $install);
                 }
@@ -906,9 +908,14 @@ class Payin7 extends PaymentModule
     {
         // prevent sending an email to the customer upon checking out with Payin7
         // as the order is actually NOT complete yet
-        if (isset($params['customer'])) {
-            $customer = $params['customer'];
-            $customer->email = null;
+        if (isset($params['customer'], $params['order'])) {
+            /** @var OrderCore $order */
+            $order = $params['order'];
+
+            if ($order->module === self::MODULE_NAME) {
+                $customer = $params['customer'];
+                $customer->email = null;
+            }
         }
     }
 
@@ -922,7 +929,7 @@ class Payin7 extends PaymentModule
     public function hookUpdateOrderStatus($params)
     {
         // save the changes and flush the history to payin7 - fast
-        if ($this->history_update_enabled && isset($params['newOrderStatus']) && isset($params['id_order'])) {
+        if ($this->history_update_enabled && isset($params['newOrderStatus'], $params['id_order'])) {
             $new_status = $params['newOrderStatus'];
             /** @noinspection PhpUndefinedClassInspection */
             $order = new Order($params['id_order']);
@@ -960,14 +967,17 @@ class Payin7 extends PaymentModule
 
     public function hasRejectCookie()
     {
+        $n = self::REJECT_COOKIE_NAME;
+
         /** @noinspection PhpUndefinedMethodInspection */
-        return (bool)$this->context->cookie->__get(self::REJECT_COOKIE_NAME);
+        return (bool)$this->context->cookie->$n;
     }
 
     public function setRejectCookie($set = true)
     {
+        $n = self::REJECT_COOKIE_NAME;
         /** @noinspection PhpUndefinedMethodInspection */
-        $this->context->cookie->__set(self::REJECT_COOKIE_NAME, ($set ? true : null));
+        $this->context->cookie->$n = ($set ? true : null);
     }
 
     public function hookAdminOrder($params)
@@ -986,9 +996,9 @@ class Payin7 extends PaymentModule
         }
 
         $this->context->smarty->assign(array(
-            'order_type' => ($porder_model->getPayin7SandboxOrder() ? 'SANDBOX' : 'LIVE'),
-            'order_submitted' => ($porder_model->getPayin7OrderSent() ? 'YES' : 'NO'),
-            'order_completed' => ($porder_model->getPayin7OrderAccepted() ? 'YES' : 'NO'),
+            'order_type' => $porder_model->getPayin7SandboxOrder() ? 'SANDBOX' : 'LIVE',
+            'order_submitted' => $porder_model->getPayin7OrderSent() ? 'YES' : 'NO',
+            'order_completed' => $porder_model->getPayin7OrderAccepted() ? 'YES' : 'NO',
             'order_identifier' => $porder_model->getPayin7OrderIdentifier(),
             'order_identifier_js' => json_encode($porder_model->getPayin7OrderIdentifier()),
             'order_payin7_backend_link' => $this->getBackendViewOrderUrl($porder_model,
@@ -1131,6 +1141,12 @@ class Payin7 extends PaymentModule
             (defined('_PS_PRICE_COMPUTE_PRECISION_') ? _PS_PRICE_COMPUTE_PRECISION_ : 1));
     }
 
+    /**
+     * @param \Payin7\Models\OrderModel $order_model
+     * @param string $source
+     * @param bool $update
+     * @return \Payin7\Models\OrderSubmitModel
+     */
     public function submitOrder(\Payin7\Models\OrderModel $order_model, $source = null, $update = false)
     {
         $this->getLogger()->info(get_class($this) . ': submitorder :: ' . $order_model);
@@ -1160,9 +1176,9 @@ class Payin7 extends PaymentModule
     public function prepareCartQuote(\Payin7\Models\QuoteModel $quote = null, $full_data = false, $cart = null)
     {
         /** @var \Payin7\Models\QuoteModel $quote */
-        $quote = $quote ? $quote : $this->getModelInstance('quote');
+        $quote = $quote ?: $this->getModelInstance('quote');
 
-        $cart = $cart ? $cart : $this->context->cart;
+        $cart = $cart ?: $this->context->cart;
 
         if (!$cart) {
             return null;
@@ -1359,6 +1375,12 @@ class Payin7 extends PaymentModule
         return $quote;
     }
 
+    /**
+     * @param int|null $id_shop
+     * @param bool|null $ssl
+     * @param bool $relative_protocol
+     * @return string
+     */
     protected function getBaseLink($id_shop = null, $ssl = null, $relative_protocol = false)
     {
         static $force_ssl = null;
@@ -1372,7 +1394,7 @@ class Payin7 extends PaymentModule
         }
 
         /** @noinspection PhpUndefinedClassInspection */
-        if (Configuration::get('PS_MULTISHOP_FEATURE_ACTIVE') && $id_shop !== null) {
+        if ($id_shop !== null && Configuration::get('PS_MULTISHOP_FEATURE_ACTIVE')) {
             $shop = new Shop($id_shop);
         } else {
             $shop = Context::getContext()->shop;
@@ -1398,18 +1420,16 @@ class Payin7 extends PaymentModule
                 $this->name . '/' . $controller . '.php';
             $url .= ($params ? '?' . http_build_query($params, '', '&') : null);
         } else {
-            if ($this->_is15up) {
-                if ($this->_use_custom_urls && $custom_route_handle) {
-                    // append a custom prefix for custom routes matching
-                    /** @noinspection PhpUndefinedClassInspection */
-                    $dispatcher = Dispatcher::getInstance();
-                    /** @noinspection PhpUndefinedFieldInspection */
-                    $id_lang = Context::getContext()->language->id;
-                    /** @noinspection PhpUndefinedMethodInspection */
-                    $url = $this->getBaseLink(null, $is_secure, false) .
-                        $dispatcher->createUrl($custom_route_handle, $id_lang, $params);
-                    return $url;
-                }
+            if ($this->_is15up && $this->_use_custom_urls && $custom_route_handle) {
+                // append a custom prefix for custom routes matching
+                /** @noinspection PhpUndefinedClassInspection */
+                $dispatcher = Dispatcher::getInstance();
+                /** @noinspection PhpUndefinedFieldInspection */
+                $id_lang = Context::getContext()->language->id;
+                /** @noinspection PhpUndefinedMethodInspection */
+                $url = $this->getBaseLink(null, $is_secure, false) .
+                    $dispatcher->createUrl($custom_route_handle, $id_lang, $params);
+                return $url;
             }
 
             /** @noinspection PhpUndefinedMethodInspection */
@@ -1492,7 +1512,7 @@ class Payin7 extends PaymentModule
                         $this->getShouldUseSecureConnection(),
                         'ordervalidate_handler2')
                 )),
-                'is16up' => version_compare(_PS_VERSION_, "1.6", ">=")
+                'is16up' => version_compare(_PS_VERSION_, '1.6', '>=')
             )));
 
             /** @noinspection PhpUndefinedMethodInspection */
@@ -1505,8 +1525,8 @@ class Payin7 extends PaymentModule
     public function isRequestSecure()
     {
         return (isset($_SERVER['REDIRECT_HTTPS']) && $_SERVER['REDIRECT_HTTPS']) ||
-        isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] ||
-        isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] == 'https';
+            isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] ||
+            isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] == 'https';
     }
 
     public function getCurrentUrl()
@@ -1548,7 +1568,7 @@ class Payin7 extends PaymentModule
         }
 
         /** @noinspection PhpIncludeInspection */
-        require_once($fname);
+        require_once $fname;
 
         $cls_name = "Payin7\\Models\\" . Payin7\Tools\Inflector::camelize($model_name . '_model');
         $cls = new $cls_name();
@@ -1565,7 +1585,7 @@ class Payin7 extends PaymentModule
     {
         /** @noinspection PhpUndefinedClassInspection */
         $cfg = Configuration::get('PAYIN7_API_SERVER_HOSTNAME');
-        $cfg = $cfg ? $cfg : ($with_defaults ? self::CFG_DEFAULT_PAYIN7_API_SERVER_HOSTNAME : $cfg);
+        $cfg = $cfg ?: ($with_defaults ? self::CFG_DEFAULT_PAYIN7_API_SERVER_HOSTNAME : $cfg);
         return $cfg;
     }
 
@@ -1603,7 +1623,7 @@ class Payin7 extends PaymentModule
     {
         /** @noinspection PhpUndefinedClassInspection */
         $cfg = Configuration::get('PAYIN7_API_VERSION');
-        $cfg = $cfg ? $cfg : ($with_defaults ? self::CFG_DEFAULT_PAYIN7_API_VERSION : $cfg);
+        $cfg = $cfg ?: ($with_defaults ? self::CFG_DEFAULT_PAYIN7_API_VERSION : $cfg);
         return $cfg;
     }
 
@@ -1659,7 +1679,7 @@ class Payin7 extends PaymentModule
     public function getApiClientInstance()
     {
         /** @noinspection PhpIncludeInspection */
-        require_once(__DIR__ . DS . 'classes' . DS . 'api' . DS . 'api_client.php');
+        require_once __DIR__ . DS . 'classes' . DS . 'api' . DS . 'api_client.php';
 
         // this is a workaround for prestashop 1.4
         // reregister the __autoload method after including api_client.php above
@@ -1683,7 +1703,7 @@ class Payin7 extends PaymentModule
 
     public function getCurrentLocaleCode()
     {
-        if (version_compare(_PS_VERSION_, "1.5", ">=")) {
+        if (version_compare(_PS_VERSION_, '1.5', '>=')) {
             /** @noinspection PhpUndefinedFieldInspection */
             return $this->context->language->iso_code;
         } else {
@@ -1759,8 +1779,7 @@ class Payin7 extends PaymentModule
         $is_sandbox_order = $order->getPayin7SandboxOrder();
         $api_key = $is_sandbox_order ? $this->getConfigApiSandboxKey() : $this->getConfigApiProductionKey();
         $secure_key_match = sha1(sha1($order->getPayin7OrderIdentifier() . $api_key) . $api_key);
-        $matched = ($secure_key == $secure_key_match);
-        return $matched;
+        return $secure_key == $secure_key_match;
     }
 
     public function getIsInSecureMode()
@@ -1783,28 +1802,34 @@ class Payin7 extends PaymentModule
         }
 
         $offset = -1;
-        $c = '';
         $read = '';
         $i = 0;
-        $fp = @fopen($filename, "r");
+        $fp = @fopen($filename, 'rb');
         while ($lines && fseek($fp, $offset, SEEK_END) >= 0) {
             $c = fgetc($fp);
-            if ($c == "\n" || $c == "\r") {
+            if ($c === "\n" || $c === "\r") {
                 $lines--;
                 if ($revers) {
+                    $read[$i] = isset($read[$i]) ? $read[$i] : null;
                     $read[$i] = strrev($read[$i]);
                     $i++;
                 }
             }
-            if ($revers) $read[$i] .= $c;
-            else $read .= $c;
+            if ($revers) {
+                $read[$i] = isset($read[$i]) ? $read[$i] : null;
+                $read[$i] .= $c;
+            } else {
+                $read .= $c;
+            }
             $offset--;
         }
         fclose($fp);
         if ($revers) {
-            if ($read[$i] == "\n" || $read[$i] == "\r")
+            if ($read[$i] === "\n" || $read[$i] === "\r") {
                 array_pop($read);
-            else $read[$i] = strrev($read[$i]);
+            } else {
+                $read[$i] = strrev($read[$i]);
+            }
             return implode('', $read);
         }
         return strrev(rtrim($read, "\n\r"));
@@ -1832,6 +1857,15 @@ class Payin7 extends PaymentModule
         return $secure;
     }
 
+    /**
+     * @param string $service_type
+     * @param string|null $path
+     * @param array|null $query_params
+     * @param bool|null $secure
+     * @param bool $noproto
+     * @param bool|null $sandbox
+     * @return null|string
+     */
     public function getServiceUrl($service_type, $path = null, array $query_params = null, $secure = null, $noproto = false, $sandbox = null)
     {
         $service_subdomain = isset($this->_service_subdomains[$service_type]) ? $this->_service_subdomains[$service_type] : null;
@@ -1841,11 +1875,11 @@ class Payin7 extends PaymentModule
         }
 
         $server_port = $this->getConfigApiServerPort();
-        $api_ver = ($service_type == self::SERVICE_API ? $this->getConfigApiVersion() : null);
-        $sandbox_enabled = isset($sandbox) ? $sandbox : $this->getConfigApiSandboxMode();
+        $api_ver = ($service_type === self::SERVICE_API ? $this->getConfigApiVersion() : null);
+        $sandbox_enabled = null !== $sandbox ? $sandbox : $this->getConfigApiSandboxMode();
         $hostname = $this->getConfigApiServerHostname();
 
-        $is_internal_content = ($service_type == self::SERVICE_RES || $service_type == self::SERVICE_JSAPI);
+        $is_internal_content = ($service_type === self::SERVICE_RES || $service_type === self::SERVICE_JSAPI);
         $secure = isset($secure) ? $secure : $this->getShouldUseSecureConnection($is_internal_content);
 
         $params = (array)$query_params;
@@ -1856,24 +1890,24 @@ class Payin7 extends PaymentModule
         $path_locale = null;
 
         if ($locale && !isset($params['locale'])) {
-            if ($service_type == self::SERVICE_API) {
+            if ($service_type === self::SERVICE_API) {
                 $params['locale'] = $locale;
-            } else if ($service_type == self::SERVICE_FRONTEND ||
-                $service_type == self::SERVICE_BACKEND
+            } else if ($service_type === self::SERVICE_FRONTEND ||
+                $service_type === self::SERVICE_BACKEND
             ) {
                 $path_locale = '/' . $locale;
                 unset($params['locale']);
             }
         }
 
-        if ($service_type == self::SERVICE_RES ||
-            $service_type == self::SERVICE_JSAPI
+        if ($service_type === self::SERVICE_RES ||
+            $service_type === self::SERVICE_JSAPI
         ) {
             unset($params['locale']);
         }
 
-        if (($service_type == self::SERVICE_FRONTEND ||
-                $service_type == self::SERVICE_BACKEND) &&
+        if (($service_type === self::SERVICE_FRONTEND ||
+                $service_type === self::SERVICE_BACKEND) &&
             !isset($params['key'])
         ) {
             $params['key'] = $this->getEncryptedClientKey();
@@ -1884,13 +1918,12 @@ class Payin7 extends PaymentModule
         $url = ($noproto ? '//' : ($secure ? 'https://' : 'http://')) .
             ($service_subdomain ? $service_subdomain . '.' : null) .
             $hostname . ($server_port ? ':' . $server_port : null) .
-            ($sandbox_enabled && ($service_type == self::SERVICE_FRONTEND || $service_type == self::SERVICE_BACKEND) ? '/sandbox' : null) .
+            ($sandbox_enabled && ($service_type === self::SERVICE_FRONTEND || $service_type === self::SERVICE_BACKEND) ? '/sandbox' : null) .
             $path_locale .
             ($api_ver ? '/' . $api_ver : null);
 
         if (!$path) {
-            $ret = $url . ($params ? '?' . http_build_query($params) : null);
-            return $ret;
+            return $url . ($params ? '?' . http_build_query($params) : null);
         }
 
         $url .= $path . ($params ? '?' . http_build_query($params) : null);
@@ -1904,11 +1937,11 @@ class Payin7 extends PaymentModule
         $db = Db::getInstance();
 
         // missing on 1.4
+        $db_ver = null;
+
         if (method_exists($db, 'getVersion')) {
             /** @noinspection PhpUndefinedClassInspection */
             $db_ver = Db::getInstance()->getVersion();
-        } else {
-            $db_ver = null;
         }
 
         $sysinfo = array_filter(array(
@@ -1920,7 +1953,7 @@ class Payin7 extends PaymentModule
             'os_ident' => php_uname(),
             'os_version' => php_uname('v'),
             'db_version' => $db_ver,
-            'client_user_agent' => (isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : null),
+            'client_user_agent' => isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : null,
             'client_env' => json_encode($_SERVER)
         ));
 
