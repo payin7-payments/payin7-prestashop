@@ -39,7 +39,7 @@ if (!defined('_PS_VERSION_')) {
 class Payin7 extends PaymentModule
 {
     const MODULE_NAME = 'payin7';
-    const PLUGIN_VERSION = '1.0.10';
+    const PLUGIN_VERSION = '1.0.11';
     const MIN_PHP_VER = '5.3.3';
 
     const SETTINGS_FORM_NAME = 'submitPayin7Settings';
@@ -908,15 +908,14 @@ class Payin7 extends PaymentModule
     {
         // prevent sending an email to the customer upon checking out with Payin7
         // as the order is actually NOT complete yet
-        if (isset($params['customer'], $params['order'])) {
-            /** @var OrderCore $order */
+        /*if (isset($params['customer'], $params['order'])) {
             $order = $params['order'];
 
             if ($order->module === self::MODULE_NAME) {
                 $customer = $params['customer'];
                 $customer->email = null;
             }
-        }
+        }*/
     }
 
     private $history_update_enabled = true;

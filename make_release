@@ -65,7 +65,8 @@ cd $CDIR
 
 $GIT add $REL_DIR
 $GIT commit -am "Added version $VER"
-$GIT push
+$GIT tag "$VER"
+$GIT push --tags
 
 echo "Done - version $VER to ve found in: $FNAME"
 exit 0

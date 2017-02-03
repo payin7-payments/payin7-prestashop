@@ -6,6 +6,10 @@ Developed and maintaned by Payin7 S.L.
 All rights Reserved, Payin7 S.L. 2016
 =========
 
+1.0.11 (2017-02-03)
+
+- Bugfix: payin7 module order complete notification email could not be sent.
+
 1.0.10 (2017-02-03)
 
 - Bugfix: payin7 module could not create an order when the request is made by an SBN call and the country 'UK' is disabled in the Prestashop system.
